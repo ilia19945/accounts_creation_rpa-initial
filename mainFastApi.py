@@ -203,7 +203,7 @@ if __name__ == 'mainFastApi':
                                                         f"Error code: {assigned_license[0]}\n"
                                                         f"Error message: {assigned_license[1]['error']['message']}", jira_key)
                                     print(assigned_license[0])
-                                    print(assigned_license[1])  # response body
+                                    print(assigned_license[1])  # response body 
 
                             # other department
                             else:
