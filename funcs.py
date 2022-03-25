@@ -3,11 +3,16 @@ import time
 import requests
 import string
 import random
-import settings
+import os
 
 
 # functions
 # just receives google application info
+
+#hidden variables in OS
+google_client_id = os.environ.get('GOOGLE_CLIENT_ID')
+google_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
+jira_api = os.environ.get('JIRA_API')
 
 def get_app_info(arg):
     with open('client_secret_675261997418-4pfe4aep6v3l3pl13lii6p8arsd4md3m.apps.googleusercontent.com.json') as data:
@@ -17,7 +22,7 @@ def get_app_info(arg):
 
 # returns the actual token
 def get_actual_token(arg):  # ОБРАТИ ВНИМАНИЕ ЧТО ИСПОЛЬЗУЕТСЯ ФАЙЛ tokens2!!! НА БОЮ ПЕРЕКЛЮЧИТЬ НА TOKENS.JSON
-    with open('access_refresh_tokens2.json') as data:
+    with open('access_refresh_tokens.json') as data:
         # open the file and parse it to the latest json
         newest_data = data.read().split('\n')[-2]
         token = json.loads(newest_data)[arg]
@@ -67,7 +72,7 @@ def exchange_auth_code_to_access_refresh_token(code, jira_key):
 
         # print(refreshed_token)
         # write json to the end of the file
-        file = open('access_refresh_tokens2.json', 'a')
+        file = open('access_refresh_tokens.json', 'a')
         file.write(str(refreshed_token) + '\n')
         file.close()
         print('Step 5 executed successfully! Auth code has been exchanged to an access token.\n'
@@ -100,7 +105,7 @@ def refresh_token_func():
 
     # print(refreshed_token)
     # write json to the end of the file
-    file = open('access_refresh_tokens2.json', 'a')
+    file = open('access_refresh_tokens.json', 'a')
     file.write(str(refreshed_token) + '\n')
 
     file.close()
@@ -195,7 +200,7 @@ def send_jira_comment(message, jira_key):
     url = f'https://junehomes.atlassian.net/rest/api/2/issue/{jira_key}/comment'
     # это кринж надо бы откуда-то токен из внешнего файла доставать, но пока пох
     headers = {
-        'Authorization': settings.jira_api,  # \X.X/
+        'Authorization': jira_api,  # \X.X/
         'Content-Type': 'application/json'
     }
     data = json.dumps(
@@ -226,10 +231,13 @@ def create_juneos_dev_user(first_name, last_name, suggested_email, personal_phon
     if juneos_dev_user.status_code < 300:
         print('user created')
         print(juneos_dev_user.json()['user'])
-        return juneos_dev_user.json()['token'], juneos_dev_user.json()['user']
+        return juneos_dev_user.status_code, juneos_dev_user.json()['token'], juneos_dev_user.json()['user'], juneos_dev_user.json()['user']['id']
+
 
     else:  # if error
         print(juneos_dev_user.json()['errors'])
         return juneos_dev_user.json()['errors']
 
-    
+
+def create_amazon_user():
+    pass

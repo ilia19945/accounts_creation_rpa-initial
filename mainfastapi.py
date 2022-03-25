@@ -8,6 +8,13 @@ import funcs as f
 from fastapi import Body, FastAPI, HTTPException, Query  # BackgroundTasks
 from typing import Optional
 
+# run server: uvicorn mainfastapi:app --reload --port 80
+# run ngrok: -> ngrok http 80
+    # if run through ngrok - don't forget to update uri and redirect urin in:
+        # jira webhook
+        # google api - https://console.cloud.google.com/apis/credentials/oauthclient/675261997418-4pfe4aep6v3l3pl13lii6p8arsd4md3m.apps.googleusercontent.com?project=test-saml-accounts-creation
+        # google json
+
 # import settings
 
 app = FastAPI()
@@ -18,12 +25,12 @@ jira_key = ''
 # @app.get("/")
 # async def simple_get():
 #     return {"message": "Hello World"}
-print("jira_key:" + jira_key)
-if __name__ == 'mainFastApi':
+print("jira_key: " + jira_key)
+if __name__ == 'mainfastapi':
 
     @app.get("/"
              # , name="Don't touch!! :P",
-             # description='This method is a technical restriction of oAuth2.0 Google Authorization process.\n Never use it w/o direct purpose'
+             # description='This method is a technical restriction of oAuth2.0 Google Authorization process.\n Never use it w/o a direct purpose'
              )
     async def redirect_from_google(code: Optional[str] = Query(None,
                                                                description='authorization code from google '
@@ -238,17 +245,17 @@ if __name__ == 'mainFastApi':
                                                                            password=f.password
                                                                            )
 
-                                if juneos_dev_user[0] == 'token':
-                                    f.send_jira_comment("JuneOS dev. user is created.\n"
-                                                        f"Username: {suggested_email}",
+                                if juneos_dev_user[0] < 300:
+                                    f.send_jira_comment("*JuneOS development* user created.\n"
+                                                        f"Username: *{suggested_email}*, \n"
+                                                        f"*User [link|https://dev.junehomes.net/december_access/users/user/{juneos_dev_user[3]}/change/]*.",
                                                         jira_key=jira_key)
                                 else:
                                     print('error')
 
-
-
                             # other services ...........
-                            #
+                            # amazon_user = create_amazon_user()
+                            # if amazon_user[0] < 300 :
                             #
                             #
 
