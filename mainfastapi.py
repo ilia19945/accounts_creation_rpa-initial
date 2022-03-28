@@ -10,10 +10,10 @@ from typing import Optional
 
 # run server: uvicorn mainfastapi:app --reload --port 80
 # run ngrok: -> ngrok http 80
-    # if run through ngrok - don't forget to update uri and redirect urin in:
-        # jira webhook
-        # google api - https://console.cloud.google.com/apis/credentials/oauthclient/675261997418-4pfe4aep6v3l3pl13lii6p8arsd4md3m.apps.googleusercontent.com?project=test-saml-accounts-creation
-        # google json
+# if run through ngrok - don't forget to update uri and redirect urin in:
+# jira webhook https://junehomes.atlassian.net/plugins/servlet/webhooks#
+# google api - https://console.cloud.google.com/apis/credentials/oauthclient/675261997418-4pfe4aep6v3l3pl13lii6p8arsd4md3m.apps.googleusercontent.com?project=test-saml-accounts-creation
+# google json
 
 # import settings
 
@@ -62,6 +62,7 @@ if __name__ == 'mainfastapi':
         else:
             print('Received a random request')
             return 'Why are you on this page?=.='
+
 
     # webhook from jira
 
@@ -157,9 +158,9 @@ if __name__ == 'mainfastapi':
                         jira_comment_response = f.send_jira_comment(
                             "*Access token expired!*\nNew access token should be requested before moving forward. "
                             "Press the ☢ {color:red}*[BIG RED BUTTON|" + new_access_token + "]""*{color} ☢ "
-                            "and accept app permissions (if asked).\n"
-                            "⚠ *REMEMBER: IT'S ONE TIME LINK! SHOULD BE DELETED AFTER REFRESHING* ⚠\n"
-                            "(It's recommended to open in a new browser tab)\n",
+                                                                                            "and accept app permissions (if asked).\n"
+                                                                                            "⚠ *REMEMBER: IT'S ONE TIME LINK! SHOULD BE DELETED AFTER REFRESHING* ⚠\n"
+                                                                                            "(It's recommended to open in a new browser tab)\n",
                             jira_key)
                         if jira_comment_response[0] > 300:
                             print("Jira comment wasn't added")
@@ -174,7 +175,7 @@ if __name__ == 'mainfastapi':
                                             "(Switch the ticket status -> \"In Progress\" -> \" Create user accounts!\")", jira_key)
 
                 else:
-                    print('Access token is actual. Create new user request will be sent.')
+                    print('Access token is actual. Suggested user email will be checked to the uniqueness.')
                     url = f"https://admin.googleapis.com/admin/directory/v1/users/{suggested_email}"
                     payload = {}
                     headers = {
@@ -188,12 +189,33 @@ if __name__ == 'mainfastapi':
                         f.send_jira_comment(f"The account ({suggested_email}) *is already exist*!\n"
                                             f"Check suggested email field and try again.", jira_key)
                     else:
+                        """Suggested email is unique"""
                         google_user = f.create_google_user_req(first_name, last_name, suggested_email, organizational_unit)
                         if google_user[0] < 300:  # user created successfully
                             print(f"(1/3) User {first_name} {last_name} is successfully created!\n"
                                   f"Username: {suggested_email}\n")
                             f.send_jira_comment(f"(1/3) User *{first_name} {last_name}* is successfully created!\n"
                                                 f"User Email: *{suggested_email}*\n", jira_key)
+
+                            # creating draft message for sending later from gmail interface
+                            # email templates are in \email_templates folder. need to update them there.
+
+                            #create a temlate for draft
+                            with open("C:\PythonProjects\Fastapi\email_templates\google_mail.txt", "r") as data:
+                                email_template = data.read()
+                                username = email_template.replace('{username}', f'<b>{first_name}</b>')
+                                final_draft = username.replace('{STRINGTOREPLACE}',
+                                                        f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
+                                                        f'<p style="font-family:verdana">- password:  <b>{f.password}</b></p>')
+
+                            f.create_draft_message(to="ilya.konovalov@junehomes.com;",
+                           sender='ilya.konovalov@junehomes.com',
+                           cc= 'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                           subject='June Homes: corporate email account',
+                           message_text=final_draft)
+
+
+
 
                             # proceeding to licence assignment according the department.
 
@@ -250,6 +272,7 @@ if __name__ == 'mainfastapi':
                                                         f"Username: *{suggested_email}*, \n"
                                                         f"*User [link|https://dev.junehomes.net/december_access/users/user/{juneos_dev_user[3]}/change/]*.",
                                                         jira_key=jira_key)
+
                                 else:
                                     print('error')
 
@@ -258,6 +281,19 @@ if __name__ == 'mainfastapi':
                             # if amazon_user[0] < 300 :
                             #
                             #
+                            #то что ниже не работает, надо протестить отдельно еще
+
+                            a = f.create_message(message_text=f.message_text,
+                                                 to='ilya.konovalov@junehomes.com',
+                                                 sender='ilya.konovalov@junehomes.com',
+                                                 subject='IT services and policies')
+                            print(a)
+
+                            b = f.send_message(service='https://gmail.googleapis.com/upload/gmail/v1/users/ilya.konovalov@junehomes.com/drafts/send',
+                                               message=a, user_id='ilya.konovalov@junehomes.com')
+                            print(b)
+
+
 
                         else:  # error creating google user
                             f.send_jira_comment("An error occurred while creating google user attempt\n"

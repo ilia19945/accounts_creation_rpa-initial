@@ -1,10 +1,11 @@
 import json
 import time
+from email.mime.text import MIMEText
 import requests
 import string
 import random
 import os
-
+import base64
 
 # functions
 # just receives google application info
@@ -34,12 +35,18 @@ https://developers.google.com/identity/protocols/oauth2/web-server#redirecting
 scopes explanation https://developers.google.com/identity/protocols/oauth2/scopes#admin-directory"""
 
 
+
+
 def get_new_access_token():
     refresh_access_token_request = 'https://accounts.google.com/o/oauth2/v2/auth?' \
                                    'scope=https://www.googleapis.com/auth/admin.directory.user' \
                                    '+https://www.googleapis.com/auth/apps.licensing' \
                                    '+https://www.googleapis.com/auth/admin.directory.group.member' \
-                                   '+https://www.googleapis.com/auth/admin.directory.orgunit&' \
+                                   '+https://www.googleapis.com/auth/admin.directory.orgunit' \
+                                   '+https://mail.google.com/' \
+                                   '+https://www.googleapis.com/auth/gmail.modify' \
+                                   '+https://www.googleapis.com/auth/gmail.compose' \
+                                   '+https://www.googleapis.com/auth/gmail.send&' \
                                    'access_type=offline&' \
                                    'include_granted_scopes=true&' \
                                    'response_type=code&' \
@@ -237,6 +244,76 @@ def create_juneos_dev_user(first_name, last_name, suggested_email, personal_phon
     else:  # if error
         print(juneos_dev_user.json()['errors'])
         return juneos_dev_user.json()['errors']
+
+
+# sends an email to the enduser.
+# sender should be updated manually!!!!
+def send_gmail_message(sender, to, cc, subject, message_text):
+    message = MIMEText(message_text,'html')
+    message['to'] = to
+    message['from'] = sender
+    message['cc'] = cc
+    message['subject'] = subject
+    print(message)
+    raw_message = base64.urlsafe_b64encode(message.as_string().encode()).decode()
+
+    url = f"https://gmail.googleapis.com/gmail/v1/users/{sender}/messages/send"
+
+    payload = json.dumps({
+        "raw": f"{raw_message}"
+    })
+    headers = {
+        'Authorization': f'Bearer {get_actual_token("access_token")}',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+
+    if response.status_code < 300:
+        return response.json()['id'], response.json()['labelIds']
+    else:
+        return response.json()['error']
+
+
+# print(send_gmail_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com', subject='subject', message_text='test message'))
+
+
+# creates a draft on gmail so the message can be easily sent to enduser.
+# sender should be updated manually!!!!
+def create_draft_message(sender, to, cc, subject, message_text):
+    message = MIMEText(message_text,'html')
+    message['to'] = to
+    message['from'] = sender
+    message['subject'] = subject
+    message['cc'] = cc
+    print(message)
+    raw_message = base64.urlsafe_b64encode(message.as_string().encode()).decode()
+    print(raw_message)
+    url = f"https://gmail.googleapis.com/gmail/v1/users/{sender}/drafts"
+
+    payload = json.dumps({
+        "message": {
+            "raw": f"{raw_message}"
+        }
+    })
+    headers = {
+        'Authorization': f'Bearer {get_actual_token("access_token")}',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    if response.status_code < 300:
+        return response.json()['id'], response.json()['labelIds']
+    else:
+        return response.json()['error']
+
+
+# print(create_draft_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com', subject='subject', message_text='test message'))
+
+
+
 
 
 def create_amazon_user():
