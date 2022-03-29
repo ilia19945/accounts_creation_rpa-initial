@@ -23,7 +23,7 @@ def get_app_info(arg):
 
 # returns the actual token
 def get_actual_token(arg):  # ОБРАТИ ВНИМАНИЕ ЧТО ИСПОЛЬЗУЕТСЯ ФАЙЛ tokens2!!! НА БОЮ ПЕРЕКЛЮЧИТЬ НА TOKENS.JSON
-    with open('access_refresh_tokens.json') as data:
+    with open(r'''C:\PythonProjects\Fastapi\access_refresh_tokens.json''') as data:
         # open the file and parse it to the latest json
         newest_data = data.read().split('\n')[-2]
         token = json.loads(newest_data)[arg]
@@ -254,7 +254,7 @@ def send_gmail_message(sender, to, cc, subject, message_text):
     message['from'] = sender
     message['cc'] = cc
     message['subject'] = subject
-    print(message)
+    # print(message)
     raw_message = base64.urlsafe_b64encode(message.as_string().encode()).decode()
 
     url = f"https://gmail.googleapis.com/gmail/v1/users/{sender}/messages/send"
@@ -275,8 +275,8 @@ def send_gmail_message(sender, to, cc, subject, message_text):
     else:
         return response.json()['error']
 
-
-# print(send_gmail_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com', subject='subject', message_text='test message'))
+#test:
+# print(send_gmail_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com',cc='', subject='subject', message_text='test message'))
 
 
 # creates a draft on gmail so the message can be easily sent to enduser.
@@ -287,9 +287,9 @@ def create_draft_message(sender, to, cc, subject, message_text):
     message['from'] = sender
     message['subject'] = subject
     message['cc'] = cc
-    print(message)
+    # print(message)
     raw_message = base64.urlsafe_b64encode(message.as_string().encode()).decode()
-    print(raw_message)
+    # print(raw_message)
     url = f"https://gmail.googleapis.com/gmail/v1/users/{sender}/drafts"
 
     payload = json.dumps({
@@ -305,15 +305,12 @@ def create_draft_message(sender, to, cc, subject, message_text):
 
     response = requests.request("POST", url, headers=headers, data=payload)
     if response.status_code < 300:
-        return response.json()['id'], response.json()['labelIds']
+        return response.json()['id'], response.json()['message']['labelIds']
     else:
         return response.json()['error']
 
-
-# print(create_draft_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com', subject='subject', message_text='test message'))
-
-
-
+#test:
+# print(create_draft_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com',cc='', subject='subject', message_text='test message'))
 
 
 def create_amazon_user():

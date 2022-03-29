@@ -143,7 +143,7 @@ if __name__ == 'mainfastapi':
                 print('Token lifetime:')
                 print(int(str(time.time_ns())[0:10]) - int(datetime))
 
-                if int(str(time.time_ns())[0:10]) - int(datetime) >= 3600:  # token was refreshed more than 1h ago
+                if int(str(time.time_ns())[0:10]) - int(datetime) >= 3200:  # token was refreshed more than 1h ago
                     print('Access token expired! Try to get get_actual_token("refresh_token"):')
 
                     try:  # look for refresh token in .json file
@@ -200,22 +200,21 @@ if __name__ == 'mainfastapi':
                             # creating draft message for sending later from gmail interface
                             # email templates are in \email_templates folder. need to update them there.
 
-                            #create a temlate for draft
+                            # create a temlate for draft
                             with open("C:\PythonProjects\Fastapi\email_templates\google_mail.txt", "r") as data:
                                 email_template = data.read()
                                 username = email_template.replace('{username}', f'<b>{first_name}</b>')
                                 final_draft = username.replace('{STRINGTOREPLACE}',
-                                                        f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
-                                                        f'<p style="font-family:verdana">- password:  <b>{f.password}</b></p>')
+                                                               f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
+                                                               f'<p style="font-family:verdana">- password:  <b>{f.password}</b></p>')
+                                print(final_draft)
 
+                            # creates a draft in "Sender" gmail inbox
                             f.create_draft_message(to="ilya.konovalov@junehomes.com;",
-                           sender='ilya.konovalov@junehomes.com',
-                           cc= 'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
-                           subject='June Homes: corporate email account',
-                           message_text=final_draft)
-
-
-
+                                                   sender='ilya.konovalov@junehomes.com',
+                                                   cc='idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com; PUT EMP\'S SV-s HERE <emp@supervisor.com>',
+                                                   subject='June Homes: corporate email account',
+                                                   message_text=final_draft)
 
                             # proceeding to licence assignment according the department.
 
@@ -268,34 +267,70 @@ if __name__ == 'mainfastapi':
                                                                            )
 
                                 if juneos_dev_user[0] < 300:
+
+                                    # creates an email template from juneos_dev.txt
+                                    with open("C:\PythonProjects\Fastapi\email_templates\juneos_dev.txt", "r") as data:
+                                        email_template = data.read()
+                                        username = email_template.replace('{username}', f'<b>{first_name}</b>')
+                                        final_draft = username.replace('{email}', f'<b>{suggested_email}</b>')
+                                        # print(main)
+
+                                    # sends JuneOS.Development corporate email account to gmail
+                                    f.send_gmail_message(to=f"{suggested_email}",
+                                                         sender='ilya.konovalov@junehomes.com',
+                                                         cc='idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                                                         subject='Access to JuneOS.Development property management system',
+                                                         message_text=final_draft)
+
+                                    # send event status as comment
                                     f.send_jira_comment("*JuneOS development* user created.\n"
                                                         f"Username: *{suggested_email}*, \n"
-                                                        f"*User [link|https://dev.junehomes.net/december_access/users/user/{juneos_dev_user[3]}/change/]*.",
+                                                        f"*User [link|https://dev.junehomes.net/december_access/users/user/{juneos_dev_user[3]}/change/]*.\n"
+                                                        f"Credentials are sent to *{suggested_email}*.",
                                                         jira_key=jira_key)
 
                                 else:
                                     print('error')
+                                    # send event status as comment
+                                    f.send_jira_comment(f"An error occurred while creating a juneOS dev user.\n Error: \n{juneos_dev_user[0]}",
+                                                        jira_key=jira_key)
 
                             # other services ...........
                             # amazon_user = create_amazon_user()
                             # if amazon_user[0] < 300 :
-                            #
-                            #
-                            #то что ниже не работает, надо протестить отдельно еще
 
-                            a = f.create_message(message_text=f.message_text,
-                                                 to='ilya.konovalov@junehomes.com',
-                                                 sender='ilya.konovalov@junehomes.com',
-                                                 subject='IT services and policies')
-                            print(a)
+                            # at the end, when all services are created, an IT security policies email should be sent
+                            if organizational_unit == 'Member Support':
+                                with open("C:\PythonProjects\Fastapi\email_templates\it_services_and_policies_support.txt", "r") as data:
+                                    final_draft = data.read()
 
-                            b = f.send_message(service='https://gmail.googleapis.com/upload/gmail/v1/users/ilya.konovalov@junehomes.com/drafts/send',
-                                               message=a, user_id='ilya.konovalov@junehomes.com')
-                            print(b)
+                                # sends June Homes: corporate email account  to gmail
+                                f.send_gmail_message(to=f"{suggested_email}",
+                                                     sender='ilya.konovalov@junehomes.com',
+                                                     cc='',
+                                                     subject='IT services and policies',
+                                                     message_text=final_draft)
 
+                            else:
 
+                                with open("C:\PythonProjects\Fastapi\email_templates\it_services_and_policies_wo_trello_zendesk.txt", "r") as data:
+                                    final_draft = data.read()
 
-                        else:  # error creating google user
+                                # sends it_services_and_policies_wo_trello_zendesk email to gmail
+                                f.send_gmail_message(to=f"{suggested_email}",
+                                                     sender='ilya.konovalov@junehomes.com',
+                                                     cc='',
+                                                     subject='IT services and policies',
+                                                     message_text=final_draft)
+
+                                # send event status as comment
+                                f.send_jira_comment("Final is reached!\n"
+                                                    "*IT services and policies* email is sent. Please check your 'Sent'",
+                                                    jira_key=jira_key)
+
+                        # if the normal flow is violated
+                        # error creating google user
+                        else:
                             f.send_jira_comment("An error occurred while creating google user attempt\n"
                                                 f"Error code: {google_user[0]}\n"
                                                 f"Error response: {google_user[1]}", jira_key)

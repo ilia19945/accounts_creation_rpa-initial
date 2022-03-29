@@ -1,0 +1,22 @@
+<p style="font-family:verdana">Hi {username},</p>
+
+<p style="font-family:verdana">Here is a quick instruction on how to log in to JuneOS.</p>
+
+<p style="font-family:verdana">Go to https://dev.junehomes.net/december_access/. 
+<br>In popup message use
+<br> - login: <b>dev</b>
+<br> - password: <b>dev2020</b> 
+<br>to login. 
+<br> You do not need to fill anything in the JuneOS log in form.</p>
+
+<p style="font-family:verdana">Click the "Sign in with Google" button in the bottom right.</p>
+
+<p style="font-family:verdana">Use your corporate email {email} and password to sign in to Google in the new window that pops up.</p>
+
+<p style="font-family:verdana">Voilà, JuneOS signs you in!</p>
+<br>
+<br>
+<img src="https://lh4.googleusercontent.com/qLcoVhq7hDK9FJz-bdgFzNQtn0vYOiQgSXN0c8ADX4w1FauBA58WPrno5i1Q54pPIXzmXgJI_lwYBzU5j18-2LJnZJ-Mw5BX4aMdNCoz_9cCGAkbz6e1ltTwSbYVp5G4OsB9M8l_" alt="JuneLogo" width=96 height=44>
+<p><b>Ilya Konovalov</b><br>Tech Support Engineer<br><a href="https://junehomes.com/">Junehomes.com</a><p>
+<br>
+<p style="font-size:0.5vw;color:lightgray">This is an automated message. In case of any errors please contact @Ilya Ko.<p>

@@ -1,0 +1,112 @@
+<h3 style="font-family:verdana">Introduction</h3>
+<p style="font-family:verdana">At June Homes we use IT services to improve our business processes, and in particular our team communication. To stay in sync it is important that every team member uses these services accordingly to the common practices and policies described in this document. So please read it very carefully and come back to consult it in case of doubt. Note that your knowledge of the policies described in this document may be randomly checked by the June Homes management either informally or with a formal test (questionnaire).</p>
+
+<h3 style="font-family:verdana">Main principles and services</h3>
+<p style="font-family:verdana">We are team with remote members distributed over several timezones, so it is important to use best possible communication culture and practices.
+
+
+<p style="font-family:verdana">Four golden rules of communication culture to abide:</p>
+<ol>
+<li style="font-family:verdana">Communicate concisely what others need to know about your work and be 100% sure that all concerned team members notice your information.</li>
+<li style="font-family:verdana">Duplication is evil: before creating something new (folder, task, channel, event, document) search extensively for similar items as what you are going to create may already exist.</li>
+ <li style="font-family:verdana">If you still need to create something new, don't reinvent the wheel: always do things by analogy with what already exists.</li>
+ <li style="font-family:verdana">Always write in English, no other languages are acceptable except private messages with total of 2 participants. </li>
+</ol>
+<p style="font-family:verdana">We use the following services:</p>
+<ul>
+  <li style="font-family:verdana">Slack for instant messaging and discussions (via chats and calls)</li>
+<li style="font-family:verdana">Trello for task management</li>
+<li style="font-family:verdana">Corporate Google Drive to exchange documents and files</li>
+<li style="font-family:verdana">Corporate Gmail for emails</li>
+<li style="font-family:verdana">Corporate Google Calendar for personal and team agenda</li>
+<li style="font-family:verdana">JuneOS for client relationship management and enterprise resource planning</li>
+<li style="font-family:verdana">Zendesk for customer support</li>
+</ul>
+<h3 style="font-family:verdana">Slack</h3>
+<p style="font-family:verdana">Slack is a corporate messaging system which has chats (group chat is called channel) and calls. If you are not familiar with it, it is mandatory to follow these three guides: demo, what is Slack, getting started for new members.
+<br><br>
+Channels are organized by subject (e.g. one channel for each property, one channel for coordination of showings and move-ins in each city, etc) and every new member will be invited to all channels that require his/her attention. In Junehomes Slack there are channels for every reasonable purpose, so if you think you do not see relevant channel for your question, please contact your manager and they invite you to the existing one. New channels can only be created by the IT department.
+<br><br>
+It is mandatory first to install desktop Slack application and Slack app on your mobile device, so please avoid using Slack in a web browser. When installing, it is mandatory to follow the post-installation tutorial, upload your photo, fill in your phone number and location, and use your real name in profile.</p>
+<br>
+<h3 style="font-family:verdana">How to edit your Slack profile</h3>
+<ol>
+
+	<li style="font-family:verdana">Click top right corner of Slack window (in your desktop Slack application) with a user silhouette where your name is displayed when you hover your mouse.</li>
+	<li style="font-family:verdana"> Edit profile menu item.</li>
+	<li style="font-family:verdana">It is mandatory to fill all fields:</li>
+		<ul>
+			<li style="font-family:verdana">Upload a photo of your face (so that your remote teammates see with whom they chat)</li>
+
+			<li style="font-family:verdana">Full name (must follow Firstname Lastname convention)</li>
+
+			<li style="font-family:verdana">Display name (must be the same as Full name)</li>
+
+			<li style="font-family:verdana">What I do (enter the title of your position)</li>
+
+			<li style="font-family:verdana">Phone number (the one where you can be reached in case of work-related emergency)</li>
+
+			<li style="font-family:verdana">Supervisor</li>
+
+			<li style="font-family:verdana">Team</li>
+
+			<li style="font-family:verdana">Location</li>
+		</ul>
+</ol>
+<p style="font-family:verdana">It is required to set correct notification preferences so that one does not have too much distraction following non-relevant discussions: go to menu Preferences > Notifications, in Notify me about ... section choose Direct messages, mentions & keywords. This setting means you will only be notified if someone mentions your Slack name. It also means you need to mention (type @ to do that) all team members that need to notice your message. Use magic mention word @channel to notify everyone in a channel. One good practice is to check the feed of your mentions from time to time – click @ icon (Show activity) in the top right corner of Slack window to access it.</p>
+
+<p style="font-family:verdana">When you hover your mouse over any message you see special message menu on the right – use star icon there to save message to starred items. Starred items can then be accessed clicking on star icon in the top right corner. This is especially convenient when you e.g. mark messages that require your action to revisit them later and not to forget.</p>
+
+<p style="font-family:verdana">In Slack one can reply to an individual chat message and this starts a thread (conversation). To find all recent threads go to All Threads menu on the top of left sidebar.</p>
+
+<p style="font-family:verdana">Slack allows you to send direct messages to other team members. However, it is not recommended to use it often because you disconnect other team members from the discussion, so think twice before discussing things privately and better use relevant public channel for this.</p>
+
+<p style="font-family:verdana">While it is preferred to use Slack for calls between team members, sometimes it has connectivity issues. In this case it is acceptable to use Google Meet for calls. If you are setting up a Google Calendar event for many people, it is advised to turn on meeting teleconferencing option with Google Meet instead of using Slack.</p>
+
+<p style="font-family:verdana">Discussions in Slack are only useful when they result in action items – action items that require more than 1 hr of work time must be logged and tracked in Trello.</p>
+
+<p style="font-family:verdana">It is recommended to use Slack statuses such as Vacationing to notify team members of your situation.</p>
+
+<p style="font-family:verdana">Special Slack commands</p>
+
+</ul>
+	<li style="font-family:verdana">/guru search_terms</li>
+
+	<li style="font-family:verdana">/trello search search_terms</li>
+
+	<li style="font-family:verdana"> Bot send me logo – get a link to June logo</li>
+</ul>
+
+<h3 style="font-family:verdana">Google</h3>
+
+<p style="font-family:verdana"> We use several Google services for emails, calendar and documents / files. </p>
+
+<p style="font-family:verdana">You may have your personal Google account before joining Junehomes - in this case it is advised that you log out from all personal Google sessions before doing work for Junehomes. This helps you to avoid confusion when e.g. access to some Junehomes documents is denied because you are logged in as a different user that does not belong to Junehomes organization.</p>
+
+<p style="font-family:verdana">Google Calendar is used for meetings and agenda. Log all your work-related events in your personal Google Calendar. It is required that you set your free / busy times for all calendar events correctly (that is, if you are busy, mark your event as busy, if this is a deadline event for example, mark yourself as free), .</p>
+
+<p style="font-family:verdana">It is required that you subscribe to the team calendar Junehomes team which contains events of broader importance like all team meetings or weekly report deadlines. It is also used for vacations / days-off events. After their vacation is approved by the manager, team member must add an all-day event with title: Firstname Lastname: day off to Junehomes team calendar. When on actual leave, it is recommended to set Vacationing status on Slack.</p>
+
+<p style="font-family:verdana">It is mandatory to use Google Drive for documents (Word docs, spreadsheets) and files exchange. Rules for photos exchange are described in a separate card. Usage of other file hosting services such as Dropbox for documents exchange between team members is not allowed. There is certain existing folders structure in Google Drive which will be described separately, but please look if there are existing folders for similar purpose (use search field for that) before creating new folders.</p>
+
+<h3 style="font-family:verdana">Trello</h3>
+<p style="font-family:verdana">Trello is a task management system. If you are not familiar with it, please read this tutorial first: https://trello.com/tour. Every work action that takes more than 1 hr of work time must be created as task in Trello. Task management is needed because not all work can be done immediately and it is often needed to postpone / prioritize work choosing from many tasks contained in the backlog. Also it is important to keep the task context in one place so that in case you need to pass the ball to another team member, he/she has all the previous context.</p>
+
+<p style="font-family:verdana">Task in Trello is represented by card which has status, members (users who are responsible for this task), comments, attachments and due date. When you first log in to Trello there will be a tutorial task on your personal board which is mandatory to follow. Once you are done with this tutorial, your tutorial results will be checked by a team member.</p>
+
+<p style="font-family:verdana">It is mandatory to install Trello app on your mobile device. It is mandatory to set your Trello user name as @firstname_lastname, so that others can mention you easily in comments. It is mandatory to upload to Trello same photo as you uploaded to Slack earlier.</p>
+
+<p style="font-family:verdana">Trello has an activity feed (ring icon in the top right corner of web browser window) which is individual for each user and contains updates on all cards that user follows. It is mandatory to check Trello's activity feed for updates on the tasks you follow and also for the mentions of your name by others who need your attention - you must do it at least daily to make sure you don't miss a single update on tasks that require your attention.</p>
+
+<p style="font-family:verdana">It is mandatory to clean your personal Trello board from outdated / completed tasks by moving them to the list DONE and archiving after they spend at least 1 week in DONE list. To archive card click on it and then click Archive button in the right sidebar. This cleaning is to be done at least weekly before the all team meeting. Random checks of personal boards or analysis of each team member performance / progress will be done by the management.</p>
+
+<p style="font-family:verdana">It is forbidden to delete tasks. You can only archive them when they are DONE or happened to be invalid.</p>
+
+<h3 style="font-family:verdana">Zendesk</h3>
+<p style="font-family:verdana">Zendesk is a customer support system. Our customers send emails to enjoy@junehomes.com (or its equivalent support@junehomes.com) and they are recorded as tickets in Zendesk. Then if further action from the company is needed, customer support agents create a card in Trello which is linked to Zendesk ticket. Once Trello card is completed, the customer support agent sees this and responds to the customer who filed the ticket.</p>
+<br>
+<br>
+<img src="https://lh4.googleusercontent.com/qLcoVhq7hDK9FJz-bdgFzNQtn0vYOiQgSXN0c8ADX4w1FauBA58WPrno5i1Q54pPIXzmXgJI_lwYBzU5j18-2LJnZJ-Mw5BX4aMdNCoz_9cCGAkbz6e1ltTwSbYVp5G4OsB9M8l_" alt="JuneLogo" width=96 height=44>
+<p><b>Ilya Konovalov</b><br>Tech Support Engineer<br><a href="https://junehomes.com/">Junehomes.com</a><p>
+<br>
+<p style="font-size:0.5vw;color:lightgray">This is an automated message. In case of any errors please contact @Ilya Ko.<p>
