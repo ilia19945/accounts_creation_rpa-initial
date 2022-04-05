@@ -10,10 +10,12 @@ import base64
 # functions
 # just receives google application info
 
-#hidden variables in OS
+# hidden variables in OS
 google_client_id = os.environ.get('GOOGLE_CLIENT_ID')
 google_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
 jira_api = os.environ.get('JIRA_API')
+frontapp_api = os.environ.get('FRONTAPP_API')
+
 
 def get_app_info(arg):
     with open('client_secret_675261997418-4pfe4aep6v3l3pl13lii6p8arsd4md3m.apps.googleusercontent.com.json') as data:
@@ -33,8 +35,6 @@ def get_actual_token(arg):  # ОБРАТИ ВНИМАНИЕ ЧТО ИСПОЛЬ�
 """make the http request to refresh the token Step 2:
 https://developers.google.com/identity/protocols/oauth2/web-server#redirecting
 scopes explanation https://developers.google.com/identity/protocols/oauth2/scopes#admin-directory"""
-
-
 
 
 def get_new_access_token():
@@ -249,7 +249,7 @@ def create_juneos_dev_user(first_name, last_name, suggested_email, personal_phon
 # sends an email to the enduser.
 # sender should be updated manually!!!!
 def send_gmail_message(sender, to, cc, subject, message_text):
-    message = MIMEText(message_text,'html')
+    message = MIMEText(message_text, 'html')
     message['to'] = to
     message['from'] = sender
     message['cc'] = cc
@@ -275,14 +275,15 @@ def send_gmail_message(sender, to, cc, subject, message_text):
     else:
         return response.json()['error']
 
-#test:
+
+# test:
 # print(send_gmail_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com',cc='', subject='subject', message_text='test message'))
 
 
 # creates a draft on gmail so the message can be easily sent to enduser.
 # sender should be updated manually!!!!
 def create_draft_message(sender, to, cc, subject, message_text):
-    message = MIMEText(message_text,'html')
+    message = MIMEText(message_text, 'html')
     message['to'] = to
     message['from'] = sender
     message['subject'] = subject
@@ -309,9 +310,49 @@ def create_draft_message(sender, to, cc, subject, message_text):
     else:
         return response.json()['error']
 
-#test:
+
+# test:
 # print(create_draft_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com',cc='', subject='subject', message_text='test message'))
 
 
 def create_amazon_user():
     pass
+
+
+def create_frontapp_user(suggested_email, first_name, last_name, frontapp_role):
+    url = "https://scim.frontapp.com/v2/Users"
+
+    payload = json.dumps({
+        "schemas": [
+            "urn:ietf:params:scim:schemas:core:2.0:User"
+        ],
+        "userName": f"{suggested_email}",
+        "name": {
+            "givenName": f"{first_name}",
+            "familyName": f"{last_name}"
+        },
+        "active": True,
+        "emails": [
+            {
+                "value": f"{suggested_email}"
+            }
+        ],
+        "roles": [
+            {
+                "value": f"{frontapp_role}",
+                "type": "template"
+            }
+        ],
+        "urn:ietf:params:scim:schemas:extension:frontapp:teammate": None
+    })
+    headers = {
+        'Accept': 'application/scim+json',
+        'Content-Type': 'application/scim+json',
+        'Authorization': f'Bearer {frontapp_api}'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+
+    return response.status_code, response.text
+# test:
+# frontapp_user = create_frontapp_user('ilya.test@example.com','ilya','test',)

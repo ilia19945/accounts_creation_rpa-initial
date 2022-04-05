@@ -85,50 +85,56 @@ if __name__ == 'mainfastapi':
 
             # print(jira_description)
 
+            organizational_unit = jira_description[jira_description.index('*Organizational unit*') + 1]
+            first_name = jira_description[jira_description.index('*First name*') + 1]
+            last_name = jira_description[jira_description.index('*Last name*') + 1]
+            if organizational_unit == 'Member Success':
+                last_name = last_name[0]
+            personal_email = jira_description[jira_description.index('*Personal email*') + 1].split("|")[0][
+                             0:(len(jira_description[jira_description.index('*Personal email*') + 1]))]
+            #  avoid sending email address in "[name@junehomes.com|mailto:name@junehomes.com] - string"
+            if personal_email[0:1] == '[':
+                personal_email = personal_email[1:]
+            elif personal_email == '':
+                personal_email = jira_description[jira_description.index('h4. Personal email') + 1].split("|")[0]
+                if personal_email[0:1] == '[':
+                    personal_email = personal_email[1:]
+
+            suggested_email = jira_description[jira_description.index('*Suggested name@junehomes.com*') + 1].split("|")[0]
+            # avoid sending email address in "[name@junehomes.com|mailto:name@junehomes.com]" string format
+            if suggested_email[0:1] == '[':
+                suggested_email = suggested_email[1:]
+            elif suggested_email == '':
+                suggested_email = jira_description[jira_description.index(
+                    '*Suggested name@junehomes.com*') + 1].split("|")[0]
+                if suggested_email[0:1] == '[':
+                    suggested_email = suggested_email[1:]
+
+            personal_phone = jira_description[jira_description.index('*Personal phone number (with country code)*') + 1]
+
+            gmail_groups = jira_description[jira_description.index('*Gmail - which groups needs access to*') + 1].split(',')
+            # добавить сюда .strip() чтобы обрезать пробелы
+
+            if '' in gmail_groups:
+                gmail_groups.remove('')
+            if ' ' in gmail_groups:
+                gmail_groups.remove(' ')
+            if 'team@junehomes.com' or ' team@junehomes.com' not in gmail_groups:
+                gmail_groups.append('team@junehomes.com')
+            frontapp_role = jira_description[jira_description.index('*If needs FrontApp, select a user role*') + 1]
+
+
             # detect only the specific status change
-            if jira_old_status == "In Progress" and jira_new_status == "Create user accounts!":
+            # creates a google account + assigns a google groups +
+            # assigns a license depending on the orgunit
+            # + creates a main google template email + sends it policies
+            # + creates juneosDEV user if org_unit = IT
+            if jira_old_status == "In Progress" and jira_new_status == "Create a google account":
+
                 print("Correct event to create user accounts detected. Perform user creation attempt ...")
                 print("timestamp: " + str(body['timestamp']))
                 print("webhookEvent: " + body['webhookEvent'])
                 print("user: " + body['user']['accountId'])
-
-                organizational_unit = jira_description[jira_description.index('*Organizational unit*') + 1]
-                first_name = jira_description[jira_description.index('*First name*') + 1]
-                last_name = jira_description[jira_description.index('*Last name*') + 1]
-                if organizational_unit == 'Member Success':
-                    last_name = last_name[0]
-                personal_email = jira_description[jira_description.index('*Personal email*') + 1].split("|")[0][
-                                 0:(len(jira_description[jira_description.index('*Personal email*') + 1]))]
-                #  avoid sending email address in "[name@junehomes.com|mailto:name@junehomes.com] - string"
-                if personal_email[0:1] == '[':
-                    personal_email = personal_email[1:]
-                elif personal_email == '':
-                    personal_email = jira_description[jira_description.index('h4. Personal email') + 1].split("|")[0]
-                    if personal_email[0:1] == '[':
-                        personal_email = personal_email[1:]
-
-                suggested_email = jira_description[jira_description.index('*Suggested name@junehomes.com*') + 1].split("|")[0]
-                # avoid sending email address in "[name@junehomes.com|mailto:name@junehomes.com] - string"
-                if suggested_email[0:1] == '[':
-                    suggested_email = suggested_email[1:]
-                elif suggested_email == '':
-                    suggested_email = jira_description[jira_description.index(
-                        '*Suggested name@junehomes.com*') + 1].split("|")[0]
-                    if suggested_email[0:1] == '[':
-                        suggested_email = suggested_email[1:]
-
-                personal_phone = jira_description[jira_description.index('*Personal phone number (with country code)*') + 1]
-
-                gmail_groups = jira_description[jira_description.index('*Gmail - which groups needs access to*') + 1].split(',')
-                # добавить сюда .strip() чтобы обрезать пробелы
-
-                if '' in gmail_groups:
-                    gmail_groups.remove('')
-                if ' ' in gmail_groups:
-                    gmail_groups.remove(' ')
-                if 'team@junehomes.com' or ' team@junehomes.com' not in gmail_groups:
-                    gmail_groups.append('team@junehomes.com')
-
                 access_token = f.get_actual_token('access_token')
                 datetime = f.get_actual_token('datetime')
                 print("Access_token: " + access_token)
@@ -207,10 +213,10 @@ if __name__ == 'mainfastapi':
                                 final_draft = username.replace('{STRINGTOREPLACE}',
                                                                f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
                                                                f'<p style="font-family:verdana">- password:  <b>{f.password}</b></p>')
-                                print(final_draft)
+                                # print(final_draft)
 
                             # creates a draft in "Sender" gmail inbox
-                            f.create_draft_message(to="ilya.konovalov@junehomes.com;",
+                            f.create_draft_message(to=f"{personal_email}",
                                                    sender='ilya.konovalov@junehomes.com',
                                                    cc='idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com; PUT EMP\'S SV-s HERE <emp@supervisor.com>',
                                                    subject='June Homes: corporate email account',
@@ -218,7 +224,7 @@ if __name__ == 'mainfastapi':
 
                             # proceeding to licence assignment according the department.
 
-                            if organizational_unit == 'Member Success':  # additional if check needs because that's another function
+                            if organizational_unit == 'Member Success':
                                 assigned_license = f.assign_google_license('1010020020', suggested_email)
                                 if assigned_license[0] < 300:  # if success
                                     print("(2/3) Google Workspace Enterprise Plus license, successfully assigned!")
@@ -295,10 +301,6 @@ if __name__ == 'mainfastapi':
                                     f.send_jira_comment(f"An error occurred while creating a juneOS dev user.\n Error: \n{juneos_dev_user[0]}",
                                                         jira_key=jira_key)
 
-                            # other services ...........
-                            # amazon_user = create_amazon_user()
-                            # if amazon_user[0] < 300 :
-
                             # at the end, when all services are created, an IT security policies email should be sent
                             if organizational_unit == 'Member Support':
                                 with open("C:\PythonProjects\Fastapi\email_templates\it_services_and_policies_support.txt", "r") as data:
@@ -335,6 +337,47 @@ if __name__ == 'mainfastapi':
                                                 f"Error code: {google_user[0]}\n"
                                                 f"Error response: {google_user[1]}", jira_key)
 
+            #creates an account on frontapp
+            elif jira_new_status == "Create a FrontApp account":
+
+                print("Frontapp role:", frontapp_role)
+
+                # new roles should be added to the dict in future
+                roles_dict = {
+                    "Sales regular user": "tea_14r7o",
+                    "Team member": "tea_14rd0",
+                    "Success team lead": "tea_14res"
+                }
+                try:
+                    print("Frontapp role_id:", roles_dict[f"{frontapp_role}"])
+                    frontapp_user = f.create_frontapp_user(suggested_email=suggested_email,
+                                           first_name=first_name,
+                                           last_name=last_name,
+                                           frontapp_role=roles_dict[f"{frontapp_role}"])
+
+                    print('Status code: ', frontapp_user[0])
+                    print(frontapp_user[1])
+
+                    f.send_jira_comment(jira_key=jira_key,
+                                        message='Frontapp User *successfully* created!\n'
+                                                f'User email: *{suggested_email}*.\n'
+                                                f'User Role: *{frontapp_role}*.')
+                except KeyError:
+                    print("the role doesn't exist")
+                    f.send_jira_comment(jira_key=jira_key, message=f'The role specified for a frontapp user: "{frontapp_role}" - *doesn\'t exist!*\n'
+                                                                   f'The list of the roles:\n {roles_dict.keys()}')
+
+            elif jira_new_status == "Create a Zendesk account":
+                print('WIP Zendesk')
+                pass
+
+            elif jira_new_status == "Create an Amazon account":
+                print('WIP Amazon')
+                pass
+
+            # other services ...........
+            # amazon_user = create_amazon_user()
+            # if amazon_user[0] < 300 :
             else:
                 print('Got a status change different from what triggers the user account creation.')
 
