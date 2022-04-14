@@ -1,3 +1,5 @@
+import time
+
 from funcs import gmail_app_password
 from celery import Celery
 
@@ -6,7 +8,8 @@ import smtplib
 
 celery_app = Celery('tasks', backend='redis://localhost', broker='redis://localhost')
 
-# to run celery, type in terminal:  celery -A tasks worker -E --loglevel=INFO  -P gevent
+# to run celery with 3 queues type in terminal:
+# celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other -P gevent
 
 @celery_app.task
 def send_gmail_message(sender, to, cc, subject, message_text):
@@ -43,3 +46,15 @@ def send_gmail_message(sender, to, cc, subject, message_text):
 # >>> a.scheduled()
 # identify the id of the task
 # celery_app.control.revoke('9c0f7294-2a1b-4ad3-9a6b-d86ef9be9795')
+
+
+@celery_app.task
+def add(x, y):
+    time.sleep(600)
+    return x + y
+
+@celery_app.task
+def multiply(x, y):
+    time.sleep(10)
+    return x * y
+

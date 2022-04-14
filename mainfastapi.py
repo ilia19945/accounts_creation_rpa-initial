@@ -20,8 +20,8 @@ from typing import Optional
 # google json
 # to use celery on windows the gevent lib should be  installed https://stackoverflow.com/questions/62524908/task-receive-but-doesnt-excute
 # because celery version +4.x  doesn't support windows
-# run celery:
-# celery -A tasks worker -E --loglevel=INFO  -P gevent
+# to run celery with 3 queues type in terminal:
+# celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other -P gevent
 # more commands in tasks.py
 
 
@@ -247,6 +247,7 @@ if __name__ == 'mainfastapi':
                                  f'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com;{supervisor_email}',
                                  'June Homes: corporate email account',
                                  final_draft),
+                                queue='new_emps',
                                 countdown=round(unix_countdown_time))
                             # calculates the time before sending the email
                             # countdown=60
@@ -322,6 +323,7 @@ if __name__ == 'mainfastapi':
                                          'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
                                          'Access to JuneOS.Development property management system',
                                          final_draft),
+                                        queue='new_emps',
                                         countdown=round(unix_countdown_time))
                                     # calculates the time before sending the email
                                     # countdown=60)
@@ -353,7 +355,12 @@ if __name__ == 'mainfastapi':
                                 #                      message_text=final_draft)
 
                                 send_gmail_message.apply_async(
-                                    ('ilya.konovalov@junehomes.com', suggested_email, '', 'IT services and policies', final_draft),
+                                    ('ilya.konovalov@junehomes.com',
+                                     suggested_email,
+                                     '',
+                                     'IT services and policies',
+                                     final_draft),
+                                    queue='new_emps',
                                     countdown=(round(unix_countdown_time) + 300))
                                 # calculates the time before sending the email
                                 # countdown=120)
@@ -370,7 +377,12 @@ if __name__ == 'mainfastapi':
                                 #                      message_text=final_draft)
 
                                 send_gmail_message.apply_async(
-                                    ('ilya.konovalov@junehomes.com', suggested_email, '', 'IT services and policies', final_draft),
+                                    ('ilya.konovalov@junehomes.com',
+                                     suggested_email,
+                                     '',
+                                     'IT services and policies',
+                                     final_draft),
+                                    queue='new_emps',
                                     countdown=(round(unix_countdown_time) + 300))
                                 # calculates the time before sending the email
                                 # countdown=120)
