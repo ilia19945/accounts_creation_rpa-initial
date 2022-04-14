@@ -1,10 +1,12 @@
 import json
 import time
-from email.mime.text import MIMEText
 import requests
 import string
 import random
 import os
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
 import base64
 
 # functions
@@ -15,6 +17,7 @@ google_client_id = os.environ.get('GOOGLE_CLIENT_ID')
 google_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
 jira_api = os.environ.get('JIRA_API')
 frontapp_api = os.environ.get('FRONTAPP_API')
+gmail_app_password = os.environ.get('GMAIL_APP_PASSWORD')
 
 
 def get_app_info(arg):
@@ -119,16 +122,16 @@ def refresh_token_func():
     print('access_refresh_tokens.json - appended!\nRefresh token was exchanged successfully.')
 
 
-password = ''
+# global password
+characters = string.ascii_letters + string.digits + string.punctuation
+password = ''.join(random.choice(characters) for i in range(8))
+
 
 
 # https://developers.google.com/admin-sdk/directory/v1/guides/manage-users
 def create_google_user_req(first_name, last_name, suggested_email, organizational_unit):
     """google response with another status which means that the account is not can be created."""
 
-    characters = string.ascii_letters + string.digits + string.punctuation
-    global password
-    password = ''.join(random.choice(characters) for i in range(8))
     file = open(r'''C:\Users\ilia1\Desktop\June Homes\User Accounts.txt''', 'a', encoding='utf-8')
 
     print(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
@@ -238,16 +241,22 @@ def create_juneos_dev_user(first_name, last_name, suggested_email, personal_phon
     if juneos_dev_user.status_code < 300:
         print('user created')
         print(juneos_dev_user.json()['user'])
-        return juneos_dev_user.status_code, juneos_dev_user.json()['token'], juneos_dev_user.json()['user'], juneos_dev_user.json()['user']['id']
+        return juneos_dev_user.status_code, \
+               juneos_dev_user.json()['token'], \
+               juneos_dev_user.json()['user'], \
+               juneos_dev_user.json()['user']['id']
 
 
     else:  # if error
         print(juneos_dev_user.json()['errors'])
-        return juneos_dev_user.json()['errors']
+        return juneos_dev_user.status_code, juneos_dev_user.json()['errors']
 
 
-# sends an email to the enduser.
-# sender should be updated manually!!!!
+
+# sends an email to the end user.
+
+# replaced with a celery task in tasks.py
+
 def send_gmail_message(sender, to, cc, subject, message_text):
     message = MIMEText(message_text, 'html')
     message['to'] = to
@@ -274,14 +283,12 @@ def send_gmail_message(sender, to, cc, subject, message_text):
         return response.json()['id'], response.json()['labelIds']
     else:
         return response.json()['error']
-
-
 # test:
 # print(send_gmail_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com',cc='', subject='subject', message_text='test message'))
 
 
 # creates a draft on gmail so the message can be easily sent to enduser.
-# sender should be updated manually!!!!
+# replaced with a celery task in tasks.py
 def create_draft_message(sender, to, cc, subject, message_text):
     message = MIMEText(message_text, 'html')
     message['to'] = to
@@ -304,12 +311,11 @@ def create_draft_message(sender, to, cc, subject, message_text):
         'Content-Type': 'application/json'
     }
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.post(url=url, headers=headers, data=payload)
     if response.status_code < 300:
         return response.json()['id'], response.json()['message']['labelIds']
     else:
         return response.json()['error']
-
 
 # test:
 # print(create_draft_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com',cc='', subject='subject', message_text='test message'))
@@ -351,7 +357,7 @@ def create_frontapp_user(suggested_email, first_name, last_name, frontapp_role):
         'Authorization': f'Bearer {frontapp_api}'
     }
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.post(url=url, headers=headers, data=payload)
 
     return response.status_code, response.text
 # test:

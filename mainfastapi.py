@@ -1,10 +1,14 @@
+import sys
+
 import requests
 import re
+import celery
 import json
 import time
-# import random
-# import string
+from datetime import date, datetime
 import funcs as f
+from tasks import send_gmail_message
+
 from fastapi import Body, FastAPI, HTTPException, Query  # BackgroundTasks
 from typing import Optional
 
@@ -14,8 +18,12 @@ from typing import Optional
 # jira webhook https://junehomes.atlassian.net/plugins/servlet/webhooks#
 # google api - https://console.cloud.google.com/apis/credentials/oauthclient/675261997418-4pfe4aep6v3l3pl13lii6p8arsd4md3m.apps.googleusercontent.com?project=test-saml-accounts-creation
 # google json
+# to use celery on windows the gevent lib should be  installed https://stackoverflow.com/questions/62524908/task-receive-but-doesnt-excute
+# because celery version +4.x  doesn't support windows
+# run celery:
+# celery -A tasks worker -E --loglevel=INFO  -P gevent
+# more commands in tasks.py
 
-# import settings
 
 app = FastAPI()
 
@@ -42,7 +50,7 @@ if __name__ == 'mainfastapi':
             raise HTTPException(status_code=400, detail=f"Bad request. Parameters 'code'={code} and 'error'={error} can\'t be at the same query")
 
         elif code:
-            if len(code) > 60 and len(code) < 85:  # assuming that auth code from Google is about to 73-75 symbols
+            if 60 < len(code) < 85:  # assuming that auth code from Google is about to 73-75 symbols
                 print('Received a request with code from google')
                 file = open('authorization_codes.txt', 'a')
                 file.write(str(time.asctime()) + ";" + code + '\n')  # add auth code to authorization_codes.txt
@@ -66,7 +74,7 @@ if __name__ == 'mainfastapi':
 
     # webhook from jira
 
-    @app.post("/webhook")
+    @app.post("/webhook", status_code=200)
     async def main_flow(
             body: dict = Body(...)
     ):
@@ -111,6 +119,7 @@ if __name__ == 'mainfastapi':
                     suggested_email = suggested_email[1:]
 
             personal_phone = jira_description[jira_description.index('*Personal phone number (with country code)*') + 1]
+            supervisor_email = jira_description[jira_description.index('*Supervisor*') + 1]
 
             gmail_groups = jira_description[jira_description.index('*Gmail - which groups needs access to*') + 1].split(',')
             # добавить сюда .strip() чтобы обрезать пробелы
@@ -122,13 +131,28 @@ if __name__ == 'mainfastapi':
             if 'team@junehomes.com' or ' team@junehomes.com' not in gmail_groups:
                 gmail_groups.append('team@junehomes.com')
             frontapp_role = jira_description[jira_description.index('*If needs FrontApp, select a user role*') + 1]
+            hire_start_date = jira_description[jira_description.index('*Start date (IT needs 3 WORKING days to create accounts)*') + 1]
+            unix_hire_start_date = datetime.strptime(hire_start_date, '%m/%d/%Y').timestamp()  # unix by the 00:00 AM
 
+            if organizational_unit in ['IT', 'Marketing & Content']:
+                unix_hire_start_date += 28800
+            else:
+                unix_hire_start_date += 46800
+
+            print("The type of the date is now ", unix_hire_start_date)
+            unix_countdown_time = unix_hire_start_date - round(time.time())
+            if unix_countdown_time <= 0:
+                unix_countdown_time = 0
+
+            print("time for task countdown ", unix_countdown_time)
+
+            # print(f.password)
 
             # detect only the specific status change
             # creates a google account + assigns a google groups +
             # assigns a license depending on the orgunit
-            # + creates a main google template email + sends it policies
-            # + creates juneosDEV user if org_unit = IT
+            # + creates a main google email + sends it policies + adds them as celery tasks.
+            # + creates juneosDEV user if org_unit = IT and sends email as celery task
             if jira_old_status == "In Progress" and jira_new_status == "Create a google account":
 
                 print("Correct event to create user accounts detected. Perform user creation attempt ...")
@@ -136,9 +160,9 @@ if __name__ == 'mainfastapi':
                 print("webhookEvent: " + body['webhookEvent'])
                 print("user: " + body['user']['accountId'])
                 access_token = f.get_actual_token('access_token')
-                datetime = f.get_actual_token('datetime')
+                token_datetime = f.get_actual_token('datetime')
                 print("Access_token: " + access_token)
-                print("datetime: " + datetime)
+                print("datetime: " + token_datetime)
                 print("first_name: " + first_name)
                 print("last_name: " + last_name)
                 print("personal_email: " + personal_email)
@@ -146,10 +170,12 @@ if __name__ == 'mainfastapi':
                 print("organizational_unit: " + organizational_unit)
                 print("personal_phone:" + personal_phone)
                 print("gmail_groups (list):" + str(gmail_groups))
-                print('Token lifetime:')
-                print(int(str(time.time_ns())[0:10]) - int(datetime))
+                print("hire_start_date: " + hire_start_date)
 
-                if int(str(time.time_ns())[0:10]) - int(datetime) >= 3200:  # token was refreshed more than 1h ago
+                print('Token lifetime:')
+                print(int(str(time.time_ns())[0:10]) - int(token_datetime))
+
+                if int(str(time.time_ns())[0:10]) - int(token_datetime) >= 3200:  # token was refreshed more than 1h ago
                     print('Access token expired! Try to get get_actual_token("refresh_token"):')
 
                     try:  # look for refresh token in .json file
@@ -163,10 +189,10 @@ if __name__ == 'mainfastapi':
                         print(new_access_token)
                         jira_comment_response = f.send_jira_comment(
                             "*Access token expired!*\nNew access token should be requested before moving forward. "
-                            "Press the ☢ {color:red}*[BIG RED BUTTON|" + new_access_token + "]""*{color} ☢ "
-                                                                                            "and accept app permissions (if asked).\n"
-                                                                                            "⚠ *REMEMBER: IT'S ONE TIME LINK! SHOULD BE DELETED AFTER REFRESHING* ⚠\n"
-                                                                                            "(It's recommended to open in a new browser tab)\n",
+                            "Press {color:red}*[Pass Google Authorization|" + new_access_token + "]""*{color} button "
+                                                                                                 "and accept app permissions (if asked).\n"
+                                                                                                 "⚠ *REMEMBER: IT'S ONE TIME LINK! SHOULD BE DELETED AFTER REFRESHING* ⚠\n"
+                                                                                                 "(It's recommended to open in a new browser tab)\n",
                             jira_key)
                         if jira_comment_response[0] > 300:
                             print("Jira comment wasn't added")
@@ -206,21 +232,24 @@ if __name__ == 'mainfastapi':
                             # creating draft message for sending later from gmail interface
                             # email templates are in \email_templates folder. need to update them there.
 
-                            # create a temlate for draft
+                            # create a temlate for email
                             with open("C:\PythonProjects\Fastapi\email_templates\google_mail.txt", "r") as data:
                                 email_template = data.read()
                                 username = email_template.replace('{username}', f'<b>{first_name}</b>')
                                 final_draft = username.replace('{STRINGTOREPLACE}',
                                                                f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
                                                                f'<p style="font-family:verdana">- password:  <b>{f.password}</b></p>')
-                                # print(final_draft)
+                                print(final_draft)
 
-                            # creates a draft in "Sender" gmail inbox
-                            f.create_draft_message(to=f"{personal_email}",
-                                                   sender='ilya.konovalov@junehomes.com',
-                                                   cc='idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com; PUT EMP\'S SV-s HERE <emp@supervisor.com>',
-                                                   subject='June Homes: corporate email account',
-                                                   message_text=final_draft)
+                            send_gmail_message.apply_async(
+                                ('ilya.konovalov@junehomes.com',
+                                 personal_email,
+                                 f'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com;{supervisor_email}',
+                                 'June Homes: corporate email account',
+                                 final_draft),
+                                countdown=round(unix_countdown_time))
+                            # calculates the time before sending the email
+                            # countdown=60
 
                             # proceeding to licence assignment according the department.
 
@@ -237,7 +266,7 @@ if __name__ == 'mainfastapi':
                                                         f"Error code: {assigned_license[0]}\n"
                                                         f"Error message: {assigned_license[1]['error']['message']}", jira_key)
                                     print(assigned_license[0])
-                                    print(assigned_license[1])  # response body 
+                                    print(assigned_license[1])  # response body
 
                             # other department
                             else:
@@ -282,23 +311,32 @@ if __name__ == 'mainfastapi':
                                         # print(main)
 
                                     # sends JuneOS.Development corporate email account to gmail
-                                    f.send_gmail_message(to=f"{suggested_email}",
-                                                         sender='ilya.konovalov@junehomes.com',
-                                                         cc='idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
-                                                         subject='Access to JuneOS.Development property management system',
-                                                         message_text=final_draft)
+                                    # send_gmail_message(to=f"{suggested_email}",
+                                    #                      sender='ilya.konovalov@junehomes.com',
+                                    #                      cc='idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                                    #                      subject='Access to JuneOS.Development property management system',
+                                    #                      message_text=final_draft)
+
+                                    send_gmail_message.apply_async(
+                                        ('ilya.konovalov@junehomes.com', f"{personal_email}",
+                                         'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                                         'Access to JuneOS.Development property management system',
+                                         final_draft),
+                                        countdown=round(unix_countdown_time))
+                                    # calculates the time before sending the email
+                                    # countdown=60)
 
                                     # send event status as comment
                                     f.send_jira_comment("*JuneOS development* user created.\n"
                                                         f"Username: *{suggested_email}*, \n"
                                                         f"*User [link|https://dev.junehomes.net/december_access/users/user/{juneos_dev_user[3]}/change/]*.\n"
-                                                        f"Credentials are sent to *{suggested_email}*.",
+                                                        f"Credentials will be sent to *{suggested_email}* in: {unix_countdown_time / 3600} hours.",
                                                         jira_key=jira_key)
 
                                 else:
                                     print('error')
                                     # send event status as comment
-                                    f.send_jira_comment(f"An error occurred while creating a juneOS dev user.\n Error: \n{juneos_dev_user[0]}",
+                                    f.send_jira_comment(f"An error occurred while creating a juneOS dev user.\n Error: \n{juneos_dev_user[1]}",
                                                         jira_key=jira_key)
 
                             # at the end, when all services are created, an IT security policies email should be sent
@@ -306,29 +344,41 @@ if __name__ == 'mainfastapi':
                                 with open("C:\PythonProjects\Fastapi\email_templates\it_services_and_policies_support.txt", "r") as data:
                                     final_draft = data.read()
 
-                                # sends June Homes: corporate email account  to gmail
-                                f.send_gmail_message(to=f"{suggested_email}",
-                                                     sender='ilya.konovalov@junehomes.com',
-                                                     cc='',
-                                                     subject='IT services and policies',
-                                                     message_text=final_draft)
+                                # sends IT services and policies for member success
+
+                                # send_gmail_message(to=f"{suggested_email}",
+                                #                      sender='ilya.konovalov@junehomes.com',
+                                #                      cc='',
+                                #                      subject='IT services and policies',
+                                #                      message_text=final_draft)
+
+                                send_gmail_message.apply_async(
+                                    ('ilya.konovalov@junehomes.com', suggested_email, '', 'IT services and policies', final_draft),
+                                    countdown=(round(unix_countdown_time) + 300))
+                                # calculates the time before sending the email
+                                # countdown=120)
 
                             else:
-
                                 with open("C:\PythonProjects\Fastapi\email_templates\it_services_and_policies_wo_trello_zendesk.txt", "r") as data:
                                     final_draft = data.read()
 
                                 # sends it_services_and_policies_wo_trello_zendesk email to gmail
-                                f.send_gmail_message(to=f"{suggested_email}",
-                                                     sender='ilya.konovalov@junehomes.com',
-                                                     cc='',
-                                                     subject='IT services and policies',
-                                                     message_text=final_draft)
+                                # send_gmail_message(to=f"{suggested_email}",
+                                #                      sender='ilya.konovalov@junehomes.com',
+                                #                      cc='',
+                                #                      subject='IT services and policies',
+                                #                      message_text=final_draft)
+
+                                send_gmail_message.apply_async(
+                                    ('ilya.konovalov@junehomes.com', suggested_email, '', 'IT services and policies', final_draft),
+                                    countdown=(round(unix_countdown_time) + 300))
+                                # calculates the time before sending the email
+                                # countdown=120)
 
                                 # send event status as comment
-                                f.send_jira_comment("Final is reached!\n"
-                                                    "*IT services and policies* email is sent. Please check your 'Sent'",
-                                                    jira_key=jira_key)
+                            f.send_jira_comment("Final is reached!\n"
+                                                f"*IT services and policies* email will be sent in *{round((unix_countdown_time + 300) / 3600, 2)}* hours.",
+                                                jira_key=jira_key)
 
                         # if the normal flow is violated
                         # error creating google user
@@ -337,7 +387,7 @@ if __name__ == 'mainfastapi':
                                                 f"Error code: {google_user[0]}\n"
                                                 f"Error response: {google_user[1]}", jira_key)
 
-            #creates an account on frontapp
+            # creates an account on frontapp
             elif jira_new_status == "Create a FrontApp account":
 
                 print("Frontapp role:", frontapp_role)
@@ -351,9 +401,9 @@ if __name__ == 'mainfastapi':
                 try:
                     print("Frontapp role_id:", roles_dict[f"{frontapp_role}"])
                     frontapp_user = f.create_frontapp_user(suggested_email=suggested_email,
-                                           first_name=first_name,
-                                           last_name=last_name,
-                                           frontapp_role=roles_dict[f"{frontapp_role}"])
+                                                           first_name=first_name,
+                                                           last_name=last_name,
+                                                           frontapp_role=roles_dict[f"{frontapp_role}"])
 
                     print('Status code: ', frontapp_user[0])
                     print(frontapp_user[1])
