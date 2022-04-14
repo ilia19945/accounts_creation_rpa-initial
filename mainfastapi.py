@@ -23,6 +23,7 @@ from typing import Optional
 # to run celery with 3 queues type in terminal:
 # celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other -P gevent
 # more commands in tasks.py
+# to use flower use command in terminal: celery -A tasks flower
 
 
 app = FastAPI()

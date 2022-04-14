@@ -6,7 +6,7 @@ from celery import Celery
 from email.mime.text import MIMEText
 import smtplib
 
-celery_app = Celery('tasks', backend='redis://localhost', broker='redis://localhost')
+celery_app = Celery('tasks', backend='redis://localhost', broker='redis://localhost',queue='new_emps,terminations,other')
 
 # to run celery with 3 queues type in terminal:
 # celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other -P gevent
