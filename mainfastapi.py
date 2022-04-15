@@ -245,13 +245,13 @@ if __name__ == 'mainfastapi':
                             send_gmail_message.apply_async(
                                 ('ilya.konovalov@junehomes.com',
                                  personal_email,
-                                 '',
+                                 f'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com;{supervisor_email}',
                                  'June Homes: corporate email account',
                                  final_draft,
                                  round(unix_countdown_time / 3600)),
                                 queue='new_emps',
                                 countdown=round(unix_countdown_time))
-                                 # f'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com;{supervisor_email}',
+
                             # calculates the time before sending the email
                             # countdown=60
                             f.send_jira_comment(f"June Homes: corporate email account email will be sent to user"
@@ -326,13 +326,13 @@ if __name__ == 'mainfastapi':
                                     # countdown=60)
                                     send_gmail_message.apply_async(
                                         ('ilya.konovalov@junehomes.com', f"{personal_email}",
-                                         '',
+                                         'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
                                          'Access to JuneOS.Development property management system',
                                          final_draft,
                                          round(unix_countdown_time / 3600)),
                                         queue='new_emps',
                                         countdown=round(unix_countdown_time))
-                                         # 'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+
                                     # send event status as comment
                                     f.send_jira_comment("*JuneOS development* user created.\n"
                                                         f"Username: *{suggested_email}*, \n"
@@ -369,7 +369,6 @@ if __name__ == 'mainfastapi':
                                     queue='new_emps',
                                     countdown=(round(unix_countdown_time) + 300))
                                 # calculates the time before sending the email
-                                # countdown=120)
 
                             else:
                                 with open("C:\PythonProjects\Fastapi\email_templates\it_services_and_policies_wo_trello_zendesk.txt", "r") as data:
@@ -392,7 +391,6 @@ if __name__ == 'mainfastapi':
                                     queue='new_emps',
                                     countdown=(round(unix_countdown_time) + 300))
                                 # calculates the time before sending the email
-                                # countdown=120)
 
                                 # send event status as comment
                             f.send_jira_comment("Final is reached!\n"
