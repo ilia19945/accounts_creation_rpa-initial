@@ -145,7 +145,7 @@ if __name__ == 'mainfastapi':
             if unix_countdown_time <= 0:
                 unix_countdown_time = 0
 
-            print("time for task countdown ", unix_countdown_time)
+            print("time for task countdown in hours: ", unix_countdown_time / 3600)
 
             # print(f.password)
 
@@ -245,14 +245,17 @@ if __name__ == 'mainfastapi':
                             send_gmail_message.apply_async(
                                 ('ilya.konovalov@junehomes.com',
                                  personal_email,
-                                 f'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com;{supervisor_email}',
+                                 '',
                                  'June Homes: corporate email account',
-                                 final_draft),
+                                 final_draft,
+                                 round(unix_countdown_time / 3600)),
                                 queue='new_emps',
                                 countdown=round(unix_countdown_time))
+                                 # f'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com;{supervisor_email}',
                             # calculates the time before sending the email
                             # countdown=60
-
+                            f.send_jira_comment(f"June Homes: corporate email account email will be sent to user"
+                                                f" *{suggested_email}* in *{unix_countdown_time/3600}* hours.\n", jira_key)
                             # proceeding to licence assignment according the department.
 
                             if organizational_unit == 'Member Success':
@@ -319,16 +322,17 @@ if __name__ == 'mainfastapi':
                                     #                      subject='Access to JuneOS.Development property management system',
                                     #                      message_text=final_draft)
 
-                                    send_gmail_message.apply_async(
-                                        ('ilya.konovalov@junehomes.com', f"{personal_email}",
-                                         'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
-                                         'Access to JuneOS.Development property management system',
-                                         final_draft),
-                                        queue='new_emps',
-                                        countdown=round(unix_countdown_time))
                                     # calculates the time before sending the email
                                     # countdown=60)
-
+                                    send_gmail_message.apply_async(
+                                        ('ilya.konovalov@junehomes.com', f"{personal_email}",
+                                         '',
+                                         'Access to JuneOS.Development property management system',
+                                         final_draft,
+                                         round(unix_countdown_time / 3600)),
+                                        queue='new_emps',
+                                        countdown=round(unix_countdown_time))
+                                         # 'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
                                     # send event status as comment
                                     f.send_jira_comment("*JuneOS development* user created.\n"
                                                         f"Username: *{suggested_email}*, \n"
@@ -360,7 +364,8 @@ if __name__ == 'mainfastapi':
                                      suggested_email,
                                      '',
                                      'IT services and policies',
-                                     final_draft),
+                                     final_draft,
+                                     round(unix_countdown_time / 3600)),
                                     queue='new_emps',
                                     countdown=(round(unix_countdown_time) + 300))
                                 # calculates the time before sending the email
@@ -382,7 +387,8 @@ if __name__ == 'mainfastapi':
                                      suggested_email,
                                      '',
                                      'IT services and policies',
-                                     final_draft),
+                                     final_draft,
+                                     round(unix_countdown_time / 3600)),
                                     queue='new_emps',
                                     countdown=(round(unix_countdown_time) + 300))
                                 # calculates the time before sending the email

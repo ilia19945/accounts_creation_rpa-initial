@@ -12,7 +12,7 @@ celery_app = Celery('tasks', backend='redis://localhost', broker='redis://localh
 # celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other -P gevent
 
 @celery_app.task
-def send_gmail_message(sender, to, cc, subject, message_text):
+def send_gmail_message(sender, to, cc, subject, message_text, countdown):
     message = MIMEText(message_text, 'html')
     message['to'] = to
     message['from'] = sender
@@ -24,7 +24,7 @@ def send_gmail_message(sender, to, cc, subject, message_text):
     server.login(sender, gmail_app_password)
     server.sendmail(sender, to, message.as_string())
     server.quit()
-    return f'Message was successfully sent to:{to}'
+    return f'Message was successfully sent to:{to}, hours to send: {countdown}'
 
 # result = send_gmail_message.apply_async(
 #                                         ('ilya.konovalov@junehomes.com',
@@ -45,7 +45,7 @@ def send_gmail_message(sender, to, cc, subject, message_text):
 # >>> a = celery_app.control.inspect()
 # >>> a.scheduled()
 # identify the id of the task
-# celery_app.control.revoke('9c0f7294-2a1b-4ad3-9a6b-d86ef9be9795')
+# celery_app.control.revoke('c944ee91-d4e7-4733-a82b-2dbdaef7c809')
 
 
 @celery_app.task

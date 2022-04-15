@@ -122,14 +122,14 @@ def refresh_token_func():
     print('access_refresh_tokens.json - appended!\nRefresh token was exchanged successfully.')
 
 
-# global password
-characters = string.ascii_letters + string.digits + string.punctuation
-password = ''.join(random.choice(characters) for i in range(8))
 
 
 
 # https://developers.google.com/admin-sdk/directory/v1/guides/manage-users
 def create_google_user_req(first_name, last_name, suggested_email, organizational_unit):
+    global password
+    characters = string.ascii_letters + string.digits + string.punctuation
+    password = ''.join(random.choice(characters) for i in range(8))
     """google response with another status which means that the account is not can be created."""
 
     file = open(r'''C:\Users\ilia1\Desktop\June Homes\User Accounts.txt''', 'a', encoding='utf-8')
@@ -208,9 +208,8 @@ def adding_user_to_google_group(gmail_groups, suggested_email):
 
 def send_jira_comment(message, jira_key):
     url = f'https://junehomes.atlassian.net/rest/api/2/issue/{jira_key}/comment'
-    # это кринж надо бы откуда-то токен из внешнего файла доставать, но пока пох
     headers = {
-        'Authorization': jira_api,  # \X.X/
+        'Authorization': jira_api,
         'Content-Type': 'application/json'
     }
     data = json.dumps(
