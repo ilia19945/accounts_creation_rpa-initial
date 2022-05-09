@@ -20,6 +20,7 @@ from typing import Optional
 # google json
 # to use celery on windows the gevent lib should be  installed https://stackoverflow.com/questions/62524908/task-receive-but-doesnt-excute
 # because celery version +4.x  doesn't support windows
+# run docker with redis
 # to run celery with 3 queues type in terminal:
 # celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other -P gevent
 # more commands in tasks.py
@@ -97,7 +98,7 @@ if __name__ == 'mainfastapi':
             organizational_unit = jira_description[jira_description.index('*Organizational unit*') + 1]
             first_name = jira_description[jira_description.index('*First name*') + 1]
             last_name = jira_description[jira_description.index('*Last name*') + 1]
-            if organizational_unit == 'Member Success':
+            if organizational_unit == 'Sales':
                 last_name = last_name[0]
             personal_email = jira_description[jira_description.index('*Personal email*') + 1].split("|")[0][
                              0:(len(jira_description[jira_description.index('*Personal email*') + 1]))]
@@ -123,19 +124,22 @@ if __name__ == 'mainfastapi':
             supervisor_email = jira_description[jira_description.index('*Supervisor*') + 1]
 
             gmail_groups = jira_description[jira_description.index('*Gmail - which groups needs access to*') + 1].split(',')
-            # добавить сюда .strip() чтобы обрезать пробелы
 
-            if '' in gmail_groups:
-                gmail_groups.remove('')
-            if ' ' in gmail_groups:
-                gmail_groups.remove(' ')
-            if 'team@junehomes.com' or ' team@junehomes.com' not in gmail_groups:
-                gmail_groups.append('team@junehomes.com')
+            gmail_groups_refined = []
+            for i in range(len(gmail_groups)):
+                gmail_groups_refined.append(gmail_groups[i].strip())
+            if 'team@junehomes.com' not in gmail_groups_refined:
+                gmail_groups_refined.append('team@junehomes.com')
+            gmail_groups_refined = [i for i in gmail_groups_refined if i]  # check for empty values like after last , ''
+            # print(gmail_groups_refined)
+
             frontapp_role = jira_description[jira_description.index('*If needs FrontApp, select a user role*') + 1]
             hire_start_date = jira_description[jira_description.index('*Start date (IT needs 3 WORKING days to create accounts)*') + 1]
             unix_hire_start_date = datetime.strptime(hire_start_date, '%m/%d/%Y').timestamp()  # unix by the 00:00 AM
+            user_email_analogy = jira_description[jira_description.index(
+                '*If needs access to the telephony system, describe details (e.g. permissions and settings like which existing user?)*') + 1]
 
-            if organizational_unit in ['IT', 'Marketing & Content']:
+            if organizational_unit in ['Technology', 'Brand Marketing']:
                 unix_hire_start_date += 28800
             else:
                 unix_hire_start_date += 46800
@@ -170,7 +174,7 @@ if __name__ == 'mainfastapi':
                 print("suggested_email: " + suggested_email)
                 print("organizational_unit: " + organizational_unit)
                 print("personal_phone:" + personal_phone)
-                print("gmail_groups (list):" + str(gmail_groups))
+                print("gmail_groups (list):" + str(gmail_groups_refined))
                 print("hire_start_date: " + hire_start_date)
 
                 print('Token lifetime:')
@@ -204,8 +208,8 @@ if __name__ == 'mainfastapi':
                         print('Refresh token was provided by google. Refresh token_func() is executed \n')
                         f.refresh_token_func()
                         f.send_jira_comment("Current access_token expired. It was automatically refreshed. "
-                                            "Please try to create user again.\n"
-                                            "(Switch the ticket status -> \"In Progress\" -> \" Create user accounts!\")", jira_key)
+                                            "Please try to create google account for the user again.\n"
+                                            "(Switch the ticket status -> \"In Progress\" -> \" Create a Google account\")", jira_key)
 
                 else:
                     print('Access token is actual. Suggested user email will be checked to the uniqueness.')
@@ -230,35 +234,9 @@ if __name__ == 'mainfastapi':
                             f.send_jira_comment(f"(1/3) User *{first_name} {last_name}* is successfully created!\n"
                                                 f"User Email: *{suggested_email}*\n", jira_key)
 
-                            # creating draft message for sending later from gmail interface
-                            # email templates are in \email_templates folder. need to update them there.
-
-                            # create a temlate for email
-                            with open("C:\PythonProjects\Fastapi\email_templates\google_mail.txt", "r") as data:
-                                email_template = data.read()
-                                username = email_template.replace('{username}', f'<b>{first_name}</b>')
-                                final_draft = username.replace('{STRINGTOREPLACE}',
-                                                               f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
-                                                               f'<p style="font-family:verdana">- password:  <b>{f.password}</b></p>')
-                                print(final_draft)
-
-                            send_gmail_message.apply_async(
-                                ('ilya.konovalov@junehomes.com',
-                                 personal_email,
-                                 f'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com;{supervisor_email}',
-                                 'June Homes: corporate email account',
-                                 final_draft,
-                                 round(unix_countdown_time / 3600)),
-                                queue='new_emps',
-                                countdown=round(unix_countdown_time))
-
-                            # calculates the time before sending the email
-                            # countdown=60
-                            f.send_jira_comment(f"June Homes: corporate email account email will be sent to user"
-                                                f" *{suggested_email}* in *{unix_countdown_time/3600}* hours.\n", jira_key)
                             # proceeding to licence assignment according the department.
 
-                            if organizational_unit == 'Member Success':
+                            if organizational_unit == 'Sales':
                                 assigned_license = f.assign_google_license('1010020020', suggested_email)
                                 if assigned_license[0] < 300:  # if success
                                     print("(2/3) Google Workspace Enterprise Plus license, successfully assigned!")
@@ -288,17 +266,45 @@ if __name__ == 'mainfastapi':
                                     print(assigned_license[0])
                                     print(assigned_license[1])  # response body
 
-                            print("gmail_groups to assign:", gmail_groups)
-                            final_row = f.adding_user_to_google_group(gmail_groups, suggested_email)
+                            print("gmail_groups to assign:", gmail_groups_refined)
+                            final_row = f.adding_user_to_google_group(gmail_groups_refined, suggested_email)
                             print(f"(3/3) {final_row}")
                             f.send_jira_comment(f"(3/3) Assigned google groups:\n"
                                                 f"{final_row}", jira_key)
+
+                            # creating email template for sending later from gmail interface
+                            # email templates are in \email_templates folder. need to update them there.
+
+                            # create a template for email
+                            with open("C:\PythonProjects\Fastapi\email_templates\google_mail.txt", "r") as data:
+                                email_template = data.read()
+                                username = email_template.replace('{username}', f'<b>{first_name}</b>')
+                                final_draft = username.replace('{STRINGTOREPLACE}',
+                                                               f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
+                                                               f'<p style="font-family:verdana">- password:  <b>{f.password}</b></p>')
+                                print(final_draft)
+
+                            send_gmail_message.apply_async(
+                                ('ilya.konovalov@junehomes.com',
+                                 personal_email,
+                                 f'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com;{supervisor_email}',
+                                 'June Homes: corporate email account',
+                                 final_draft,
+                                 round(unix_countdown_time / 3600)),
+                                queue='new_emps',
+                                countdown=round(unix_countdown_time))
+
+                            # calculates the time before sending the email
+                            # countdown=60
+                            f.send_jira_comment(f"*June Homes: corporate email account* email will be sent to\n "
+                                                f"User: *{personal_email}*\n"
+                                                f"In: *{round((unix_countdown_time / 3600), 2)}* hours.\n", jira_key)
 
                             # need to create user in juneos but impossible due to point 4 & 5
                             # https://www.notion.so/junehomes/Automatic-user-accounts-creation-82fe3380c2f749ef9d1b37a1e22abe7d
 
                             # Create user in dev.junehomes.com
-                            if organizational_unit == 'IT':
+                            if organizational_unit == 'Technology':
                                 juneos_dev_user = f.create_juneos_dev_user(first_name=first_name,
                                                                            last_name=last_name,
                                                                            suggested_email=suggested_email,
@@ -325,7 +331,7 @@ if __name__ == 'mainfastapi':
                                     # calculates the time before sending the email
                                     # countdown=60)
                                     send_gmail_message.apply_async(
-                                        ('ilya.konovalov@junehomes.com', f"{personal_email}",
+                                        ('ilya.konovalov@junehomes.com', f"{suggested_email}",
                                          'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
                                          'Access to JuneOS.Development property management system',
                                          final_draft,
@@ -337,7 +343,7 @@ if __name__ == 'mainfastapi':
                                     f.send_jira_comment("*JuneOS development* user created.\n"
                                                         f"Username: *{suggested_email}*, \n"
                                                         f"*User [link|https://dev.junehomes.net/december_access/users/user/{juneos_dev_user[3]}/change/]*.\n"
-                                                        f"Credentials will be sent to *{suggested_email}* in: {unix_countdown_time / 3600} hours.",
+                                                        f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
                                                         jira_key=jira_key)
 
                                 else:
@@ -347,7 +353,7 @@ if __name__ == 'mainfastapi':
                                                         jira_key=jira_key)
 
                             # at the end, when all services are created, an IT security policies email should be sent
-                            if organizational_unit == 'Member Support':
+                            if organizational_unit == 'Resident Experience':
                                 with open("C:\PythonProjects\Fastapi\email_templates\it_services_and_policies_support.txt", "r") as data:
                                     final_draft = data.read()
 
@@ -434,17 +440,61 @@ if __name__ == 'mainfastapi':
                     f.send_jira_comment(jira_key=jira_key, message=f'The role specified for a frontapp user: "{frontapp_role}" - *doesn\'t exist!*\n'
                                                                    f'The list of the roles:\n {roles_dict.keys()}')
 
+
+            elif jira_new_status == "Create an Amazon account":
+                print(f'Analogy to create the User on Amazon: "{user_email_analogy}"')
+                if user_email_analogy in ('', 'N/A ', ' ', '-'):
+                    f.send_jira_comment('not a user email!',
+                                        jira_key=jira_key)
+                else:
+                    amazon_result = f.create_amazon_user(suggested_email=suggested_email,
+                                                         first_name=first_name,
+                                                         last_name=last_name,
+                                                         user_email_analogy=user_email_analogy
+                                                         )
+                    if amazon_result is None:  # if no user was found
+                        f.send_jira_comment(f'No user with this email: *{user_email_analogy}*.\n'
+                                            f'Check the user email and try again.',
+                                            jira_key=jira_key)
+
+                    else:
+                        try:
+                            amazon_password = amazon_result[1]
+                            print("Amazon password:", amazon_password)
+                            f.send_jira_comment('*Amazon account* is created successfully!\n'
+                                                f'An email with Amazon account credentials will be sent to *{suggested_email}*\n'
+                                                f' In *{round((unix_countdown_time) / 3600, 2)}* hours.',
+                                                jira_key=jira_key)
+                            print(f'Amazon account for *{suggested_email}* is created successfully!')
+
+                            with open(r"C:\PythonProjects\Fastapi\email_templates\amazon_connect.txt", "r") as data:
+                                email_template = data.read()
+                                username = email_template.replace('{username}', f'<b>{first_name}</b>')
+                                final_draft = username.replace('{STRINGTOREPLACE}',
+                                                               f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
+                                                               f'<p style="font-family:verdana">- password:  <b>{amazon_password}</b></p>')
+
+                            # print(final_draft)
+                            send_gmail_message.apply_async(
+                                ('ilya.konovalov@junehomes.com',
+                                 suggested_email,
+                                 'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                                 'Access to Amazon Connect call center',
+                                 final_draft,
+                                 round(unix_countdown_time / 3600)),
+                                queue='new_emps',
+                                countdown=round(unix_countdown_time))
+
+                        except:
+                            print(amazon_result)
+                            f.send_jira_comment('Error message:\n'
+                                                f'*{amazon_result}*.',
+                                                jira_key=jira_key)
+
+
             elif jira_new_status == "Create a Zendesk account":
                 print('WIP Zendesk')
                 pass
-
-            elif jira_new_status == "Create an Amazon account":
-                print('WIP Amazon')
-                pass
-
-            # other services ...........
-            # amazon_user = create_amazon_user()
-            # if amazon_user[0] < 300 :
             else:
                 print('Got a status change different from what triggers the user account creation.')
 

@@ -1,12 +1,10 @@
-Hi {username},
+<p style="font-family:verdana">Hi {username},</p>
 
-Here's your access to Amazon Connect:
+<p style="font-family:verdana">Here's your access to Amazon Connect:</p>
 
-- username: {user name}@junehomes.com
+{STRINGTOREPLACE}
 
-- password: {password}
-
-Please use https://junehomes.awsapps.com/connect/ccp-v2#/ to log in.
+<p style="font-family:verdana">Please use https://junehomes.awsapps.com/connect/ccp-v2#/ to log in.
 <br>
 <br>
 <img src="https://lh4.googleusercontent.com/qLcoVhq7hDK9FJz-bdgFzNQtn0vYOiQgSXN0c8ADX4w1FauBA58WPrno5i1Q54pPIXzmXgJI_lwYBzU5j18-2LJnZJ-Mw5BX4aMdNCoz_9cCGAkbz6e1ltTwSbYVp5G4OsB9M8l_" alt="JuneLogo" width=96 height=44>

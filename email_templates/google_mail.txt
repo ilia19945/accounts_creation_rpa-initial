@@ -6,7 +6,7 @@
 
 <p style="font-family:verdana">Please use https://accounts.google.com/ to log in.</p>
 
-<p style="font-family:verdana">Within the first few days you may get access to some systems and services we use at June Homes, so please, don't forget to check the Spam folder of your corporate email. Also, please log in within the next 24h and make sure to set up 2FA (otherwise, you'll be locked out of your account). Here's the instruction: https://support.google.com/accounts/answer/185839?co=GENIE.Platform%3DDesktop&hl=en</p>
+<p style="font-family:verdana">Within the first few days you may get access to some systems and services we use at June Homes, so please, don't forget to check the Spam folder of your corporate email. Also, please log in within the next 24h and <b>make sure to set up 2FA (otherwise, you'll be locked out of your account)</b>. Here's the instruction: https://support.google.com/accounts/answer/185839?co=GENIE.Platform%3DDesktop&hl=en</p>
 <br>
 <br>
 <img src="https://lh4.googleusercontent.com/qLcoVhq7hDK9FJz-bdgFzNQtn0vYOiQgSXN0c8ADX4w1FauBA58WPrno5i1Q54pPIXzmXgJI_lwYBzU5j18-2LJnZJ-Mw5BX4aMdNCoz_9cCGAkbz6e1ltTwSbYVp5G4OsB9M8l_" alt="JuneLogo" width=96 height=44>
