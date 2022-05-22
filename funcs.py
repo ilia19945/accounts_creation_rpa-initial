@@ -4,9 +4,9 @@ import requests
 import string
 import random
 import os
-from email.mime.multipart import MIMEMultipart
+# from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import smtplib
+# import smtplib
 import base64
 import boto3
 from pprint import pprint
@@ -20,6 +20,9 @@ google_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
 jira_api = os.environ.get('JIRA_API')
 frontapp_api = os.environ.get('FRONTAPP_API')
 gmail_app_password = os.environ.get('GMAIL_APP_PASSWORD')
+juneos_dev_password = os.environ.get('JUNEOS_DEV_PASSWORD')
+juneos_prod_login = os.environ.get('JUNEOS_PROD_LOGIN')
+juneos_prod_password = os.environ.get('JUNEOS_PROD_PASSWORD')
 
 
 def get_app_info(arg):
@@ -218,11 +221,56 @@ def send_jira_comment(message, jira_key):
     return jira_notification.status_code, jira_notification.json()
 
 
-def create_juneos_dev_user(first_name, last_name, suggested_email, personal_phone, password):
-    url = "https://dev.junehomes.net/api/v2/auth/registration/"
+def juneOS_devprod_authorization(dev_or_prod):
+    if dev_or_prod == 'dev':
+        print('dev was requested')
+        url = "https://dev.junehomes.net/api/v2/auth/login-web-token/"
+
+        payload = json.dumps({
+            "email": "ilya.konovalov@junehomes.com",  # на деве авторизация под моей учеткой
+            "password": juneos_dev_password
+        })
+    elif dev_or_prod == 'prod':
+        print('prod was requested')
+        url = "https://junehomes.com/api/v2/auth/login-web-token/"
+
+        payload = json.dumps({
+            "email": juneos_prod_login,  # на проде под отдельной
+            "password": juneos_prod_password
+        })
+
+    else:
+        print('check func params')
+        return None
+
     headers = {
         'accept': 'application/json',
         'Content-Type': 'application/json'
+    }
+
+    try:
+        response = requests.request("POST", url, headers=headers, data=payload)
+        return response.status_code, \
+               response.cookies['csrftoken'], \
+               response.cookies['sessionid'], \
+               response.json()['token']
+    except:
+        print('Status code:', response.status_code)
+        return response.status_code, response.text
+
+
+def create_juneos_user(first_name, last_name, suggested_email, personal_phone, password, dev_or_prod):
+    if dev_or_prod == 'dev':
+        url = "https://dev.junehomes.net/api/v2/auth/registration/"
+    elif dev_or_prod == 'prod':
+        url = "https://junehomes.com/api/v2/auth/registration/"
+    else:
+        print('check dev or prod param')
+        return None
+    headers = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+
     }
     payload = json.dumps({
         "email": suggested_email,
@@ -238,16 +286,48 @@ def create_juneos_dev_user(first_name, last_name, suggested_email, personal_phon
     juneos_dev_user = requests.post(url=url, headers=headers, data=payload)
     if juneos_dev_user.status_code < 300:
         print('user created')
-        print(juneos_dev_user.json()['user'])
+        # print(juneos_dev_user.json()['user'])
         return juneos_dev_user.status_code, \
-               juneos_dev_user.json()['token'], \
                juneos_dev_user.json()['user'], \
                juneos_dev_user.json()['user']['id']
-
 
     else:  # if error
         print(juneos_dev_user.json()['errors'])
         return juneos_dev_user.status_code, juneos_dev_user.json()['errors']
+
+
+def assign_groups_to_user(user_id, groups, dev_or_prod, token, csrftoken, sessionid):
+
+    if dev_or_prod == 'dev':
+        url = f"https://dev.junehomes.net/api/v2/auth/users/{user_id}/"
+
+    elif dev_or_prod == 'prod':
+        url = f"https://dev.junehomes.net/api/v2/auth/users/{user_id}/"
+
+    else:
+        return 'Error, wrong param dev_or_prod!'
+
+    payload = json.dumps({
+        "is_staff": True,
+        "groups": groups
+    })
+    headers = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {token}',
+        'Cookie': f'sessionid={sessionid};csrftoken={csrftoken}'
+    }
+
+    print(url)
+    print()
+    print(headers)
+    print()
+    print(payload)
+
+    response = requests.request("PATCH", url, headers=headers, data=payload)
+
+    print(response.text)
+    return response.status_code, response.json()
 
 
 # sends an email to the end user.
@@ -409,6 +489,18 @@ def create_amazon_user(suggested_email, first_name, last_name, user_email_analog
         else:
             print(f"'{user_list[i]['Username']}' - {user_email_analogy}")
             pass
+
+
+def delete_amazon_user(user_email):
+    # search a user and retrieve it's ID:
+    # like: user_id = '3d3bf4fd-66d6-440f-89ca-95bd7235ce4d'
+    user_id = ''
+    client = boto3.client('connect')
+    instance_id = 'a016cbe1-24bf-483a-b2cf-a73f2f389cb4'
+    response = client.delete_user(
+        InstanceId=instance_id,
+        UserId=user_id
+    )
 
 
 def create_frontapp_user(suggested_email, first_name, last_name, frontapp_role):

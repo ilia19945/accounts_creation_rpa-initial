@@ -15,7 +15,7 @@
 <p style="font-family:verdana">We use the following services:</p>
 <ul>
   <li style="font-family:verdana">Slack for instant messaging and discussions (via chats and calls)</li>
-<li style="font-family:verdana">Trello for task management</li>
+<li style="font-family:verdana">Jira for task management</li>
 <li style="font-family:verdana">Corporate Google Drive to exchange documents and files</li>
 <li style="font-family:verdana">Corporate Gmail for emails</li>
 <li style="font-family:verdana">Corporate Google Calendar for personal and team agenda</li>
@@ -63,7 +63,7 @@ It is mandatory first to install desktop Slack application and Slack app on your
 
 <p style="font-family:verdana">While it is preferred to use Slack for calls between team members, sometimes it has connectivity issues. In this case it is acceptable to use Google Meet for calls. If you are setting up a Google Calendar event for many people, it is advised to turn on meeting teleconferencing option with Google Meet instead of using Slack.</p>
 
-<p style="font-family:verdana">Discussions in Slack are only useful when they result in action items – action items that require more than 1 hr of work time must be logged and tracked in Trello.</p>
+<p style="font-family:verdana">Discussions in Slack are only useful when they result in action items – action items that require more than 1 hr of work time must be logged and tracked in Jira.</p>
 
 <p style="font-family:verdana">It is recommended to use Slack statuses such as Vacationing to notify team members of your situation.</p>
 
@@ -71,8 +71,6 @@ It is mandatory first to install desktop Slack application and Slack app on your
 
 </ul>
 	<li style="font-family:verdana">/guru search_terms</li>
-
-	<li style="font-family:verdana">/trello search search_terms</li>
 
 	<li style="font-family:verdana"> Bot send me logo – get a link to June logo</li>
 </ul>
