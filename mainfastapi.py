@@ -25,6 +25,9 @@ from typing import Optional
 # celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other -P gevent
 # more commands in tasks.py
 # to use flower use command in terminal: celery -A tasks flower
+# when finished need to finish the notion article
+# https://www.notion.so/junehomes/Automatic-user-accounts-creation-82fe3380c2f749ef9d1b37a1e22abe7d
+
 
 
 app = FastAPI()
@@ -94,6 +97,7 @@ if __name__ == 'mainfastapi':
             # print(jira_description)
 
             organizational_unit = jira_description[jira_description.index('*Organizational unit*') + 1]
+            position_title = jira_description[jira_description.index('*Position title*') + 1]
             first_name = jira_description[jira_description.index('*First name*') + 1]
             last_name = jira_description[jira_description.index('*Last name*') + 1]
             if organizational_unit == 'Sales':
@@ -299,62 +303,6 @@ if __name__ == 'mainfastapi':
                                                 f"User: *{personal_email}*\n"
                                                 f"In: *{round((unix_countdown_time / 3600), 2)}* hours.\n", jira_key)
 
-                            # need to create user in juneos but impossible due to point 4 & 5
-                            # https://www.notion.so/junehomes/Automatic-user-accounts-creation-82fe3380c2f749ef9d1b37a1e22abe7d
-
-                            # Create user in dev.junehomes.com
-                            if organizational_unit == 'Technology':
-                                token = f.juneOS_devprod_authorization(dev_or_prod='dev')
-
-                                juneos_dev_user = f.create_juneos_user(first_name=first_name,
-                                                                       last_name=last_name,
-                                                                       suggested_email=suggested_email,
-                                                                       personal_phone=personal_phone,
-                                                                       password=f.password,
-                                                                       dev_or_prod='dev'
-                                                                       )
-
-                                if juneos_dev_user[0] < 300:
-
-                                    # creates an email template from juneos_dev.txt
-                                    with open("C:\PythonProjects\Fastapi\email_templates\juneos_dev.txt", "r") as data:
-                                        email_template = data.read()
-                                        username = email_template.replace('{username}', f'<b>{first_name}</b>')
-                                        final_draft = username.replace('{email}', f'<b>{suggested_email}</b>')
-                                        # print(main)
-
-                                    # sends JuneOS.Development corporate email account to gmail
-                                    # send_gmail_message(to=f"{suggested_email}",
-                                    #                      sender='ilya.konovalov@junehomes.com',
-                                    #                      cc='idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
-                                    #                      subject='Access to JuneOS.Development property management system',
-                                    #                      message_text=final_draft)
-
-                                    # calculates the time before sending the email
-                                    # countdown=60)
-                                    send_gmail_message.apply_async(
-                                        ('ilya.konovalov@junehomes.com', f"{suggested_email}",
-                                         'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
-                                         'Access to JuneOS.Development property management system',
-                                         final_draft,
-                                         round(unix_countdown_time / 3600)),
-                                        queue='new_emps',
-                                        countdown=round(unix_countdown_time))
-
-                                    # send event status as comment
-                                    f.send_jira_comment("*JuneOS development* user created.\n"
-                                                        f"Username: *{suggested_email}*, \n"
-                                                        f"*User [link|https://dev.junehomes.net/december_access/users/user/{juneos_dev_user[3]}/ch"
-                                                        f"ange/]*.\n "
-                                                        f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
-                                                        jira_key=jira_key)
-
-                                else:
-                                    print('error')
-                                    # send event status as comment
-                                    f.send_jira_comment(f"An error occurred while creating a juneOS dev user.\n Error: \n{juneos_dev_user[1]}",
-                                                        jira_key=jira_key)
-
                             # at the end, when all services are created, an IT security policies email should be sent
                             if organizational_unit == 'Resident Experience':
                                 with open("C:\PythonProjects\Fastapi\email_templates\it_services_and_policies_support.txt", "r") as data:
@@ -498,20 +446,39 @@ if __name__ == 'mainfastapi':
             elif jira_new_status == 'Create a JuneOS account':
 
                 with open(r'''C:\Users\ilia1\Desktop\June Homes\User Accounts.txt''', 'r', encoding='utf-8') as data:
-                    prepared_text = re.split(': |\n', data.read())[::-1]  # to search from the end of the list
+                    parsed_text = re.split(': |\n', data.read())[::-1]  # to search from the end of the list
                     try:
-                        gmail_password = prepared_text[prepared_text.index(suggested_email) - 2]
+                        gmail_password = parsed_text[parsed_text.index(suggested_email) - 2]
                         # print(gmail_password)
                     except Exception as error:
                         print(error)
+                        f.send_jira_comment(f"An error occurred while trying to retrieve user password: \n "
+                                            f"*{error}*",
+                                            jira_key=jira_key)
+                        return error
 
                 if organizational_unit == 'Technology':
+
+                    '''Группы добавлять вручную в json файле'''
+
+                    try:
+
+                        groups = f.get_juneos_groups_from_position_title(file_name='groups_technology.json')[position_title]
+                    except Exception as error:
+                        print(KeyError(error))
+                        f.send_jira_comment(f'An error occurred while trying to search a user position:\n'
+                                            f'*{error}* for *{organizational_unit}*.\n'
+                                            f'Check if position exists in /permissions_by_orgunits/*groups_technology.json*'
+                                            f' in and update json. Then try again.',
+                                            jira_key=jira_key)
+                        return KeyError(error)
+
                     juneos_user = f.create_juneos_user(first_name=first_name,
                                                        last_name=last_name,
                                                        suggested_email=suggested_email,
                                                        personal_phone=personal_phone,
                                                        password=gmail_password,
-                                                       dev_or_prod='dev',  # change to prod when prod will be released
+                                                       dev_or_prod='dev',
                                                        )
 
                     if juneos_user[0] < 300:
@@ -522,73 +489,176 @@ if __name__ == 'mainfastapi':
                                             f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
                                             jira_key=jira_key)
 
-                        #  это уже лишнее осталось для теста, на деве только суперюзера прожимать
-                        juneos_auth = f.juneOS_devprod_authorization(dev_or_prod='dev')
-                        if juneos_auth[0] < 300:
-                            # statuscode = juneos_auth[0]
-                            juneos_csrftoken = juneos_auth[1]
-                            juneos_sessionid = juneos_auth[2]
-                            juneos_token = juneos_auth[3]
-
-                            juneos_user_id = juneos_user[2]
-                            print(juneos_user_id)
-                            print()
-                            print('successfully authenticated in JuneOS.Development.')
-                            print('Trying to Assign groups')
-                            print()
-
-                            groups = [25, 32]
-                            assigned_groups = f.assign_groups_to_user(user_id=juneos_user_id,
-                                                                      groups=groups,
-                                                                      dev_or_prod='dev',
-                                                                      token=juneos_token,
-                                                                      csrftoken=juneos_csrftoken,
-                                                                      sessionid=juneos_sessionid
-                                                                      )
-                            if assigned_groups[0] < 300:
-                                f.send_jira_comment('Groups in JuneOS are assigned to *[user|https://dev.junehomes.net/december_access/'
-                                                    f'users/user/{juneos_user_id}/change/]*.\n',
-                                                    jira_key=jira_key)
-
-                            else:
-                                f.send_jira_comment('An error occured while assigning groups to JuneOS user.\n'
-                                                    f'Error code: *{assigned_groups[0]}* \n\n'
-                                                    f'*{assigned_groups[1]}*',
-                                                    jira_key=jira_key)
-
-                        else:
-                            f.send_jira_comment('An error occured while trying to authenticate on JuneOS.\n'
-                                                f'Error code: *{juneos_auth[0]}* \n\n'
-                                                f'*{juneos_auth[1]}*',
-                                                jira_key=jira_key)
-
                         with open("C:\PythonProjects\Fastapi\email_templates\juneos_dev.txt", "r") as data:
                             email_template = data.read()
                             username = email_template.replace('{username}', f'<b>{first_name}</b>')
                             final_draft = username.replace('{email}', f'<b>{suggested_email}</b>')
 
                         send_gmail_message.apply_async(
-                            ('ilya.konovalov@junehomes.com', f"{suggested_email}",
-                             # 'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
-                             'Access to JuneOS.Development property management system',
-                             final_draft,
-                             round(unix_countdown_time / 3600)),
+                            (
+                                'ilya.konovalov@junehomes.com',
+                                f"{suggested_email}",
+                                'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                                'Access to JuneOS.Development property management system',
+                                final_draft,
+                                round(unix_countdown_time / 3600)
+                            ),
                             queue='new_emps',
-                            countdown=round(unix_countdown_time))
+                            countdown=round(unix_countdown_time)
+                        )
+
+                        # #  это уже лишнее осталось для теста, на деве только суперюзера прожимать
+                        # juneos_auth = f.juneOS_devprod_authorization(dev_or_prod='dev')
+                        # if juneos_auth[0] < 300:
+                        #     # statuscode = juneos_auth[0]
+                        #     juneos_csrftoken = juneos_auth[1]
+                        #     juneos_sessionid = juneos_auth[2]
+                        #     juneos_token = juneos_auth[3]
+                        #
+                        #     juneos_user_id = juneos_user[2]
+                        #     print(juneos_user_id)
+                        #     print()
+                        #     print('successfully authenticated in JuneOS.Development.')
+                        #     print('Trying to Assign groups')
+                        #     print()
+                        #
+                        #     assigned_groups = f.assign_groups_to_user(user_id=juneos_user_id,
+                        #                                               groups=groups,
+                        #                                               dev_or_prod='dev',
+                        #                                               token=juneos_token,
+                        #                                               csrftoken=juneos_csrftoken,
+                        #                                               sessionid=juneos_sessionid
+                        #                                               )
+                        #     if assigned_groups[0] < 300:
+                        #         f.send_jira_comment('Groups in JuneOS are assigned to *[user|https://dev.junehomes.net/december_access/'
+                        #                             f'users/user/{juneos_user_id}/change/]*.\n',
+                        #                             jira_key=jira_key)
+                        #
+                        #     else:
+                        #         f.send_jira_comment('An error occurred while assigning groups to JuneOS user.\n'
+                        #                             f'Error code: *{assigned_groups[0]}* \n\n'
+                        #                             f'*{assigned_groups[1]}*',
+                        #                             jira_key=jira_key)
+                        #
+                        # else:
+                        #     f.send_jira_comment('An error occurred while trying to authenticate on JuneOS.\n'
+                        #                         f'Error code: *{juneos_auth[0]}* \n\n'
+                        #                         f'*{juneos_auth[1]}*',
+                        #                         jira_key=jira_key)
 
                     else:
-                        f.send_jira_comment('An error occured while creating a JuneOS.Development user.\n'
+                        f.send_jira_comment('An error occurred while creating a JuneOS.Development user.\n'
                                             f'Error code: *{juneos_user[0]}* \n\n'
                                             f'*{juneos_user[1]}*',
                                             jira_key=jira_key)
 
-                # other depas are not ready, due to not released update on prod
+                # other deps are not ready, due to not released update on prod
                 elif organizational_unit == 'Sales':
                     print('Sales, WIP')
+                    try:
+                        groups = f.get_juneos_groups_from_position_title(file_name='groups_sales.json')[position_title]
+                        print("Group was found! ", groups)
+                    except Exception as error:
+                        print(KeyError(error))
+                        f.send_jira_comment(f'An error occurred while trying to search a user position:\n'
+                                            f'*{error}* for *{organizational_unit}*.\n'
+                                            f'Check if position exists in /permissions_by_orgunits/*groups_sales.json*'
+                                            f' in and update json. Then try again.',
+                                            jira_key=jira_key)
+                        return KeyError(error)
 
-                    '''Группы обновлять вручную!!!!!!'''
-                    groups = [27,  #
-                              42]
+                    juneos_user = f.create_juneos_user(first_name=first_name,
+                                                       last_name=last_name,
+                                                       suggested_email=suggested_email,
+                                                       personal_phone=personal_phone,
+                                                       password=gmail_password,
+                                                       dev_or_prod='prod',
+                                                       )
+
+                    if juneos_user[0] < 300:
+                        # send event status as comment
+
+                        with open("C:\PythonProjects\Fastapi\email_templates\juneos_prod.txt", "r") as data:
+                            email_template = data.read()
+                            username = email_template.replace('{username}', f'<b>{first_name}</b>')
+                            final_draft = username.replace('{email}', f'<b>{suggested_email}</b>')
+
+                        send_gmail_message.apply_async(
+                            ('ilya.konovalov@junehomes.com',
+                             f"{suggested_email}",
+                             'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                             'Access to JuneOS property management system',
+                             final_draft,
+                             round(unix_countdown_time / 3600)
+                             ),
+                            queue='new_emps',
+                            countdown=round(unix_countdown_time)
+                        )
+
+                        f.send_jira_comment("*JuneOS* user created.\n"
+                                            f"Username: *{suggested_email}*, \n"
+                                            f"*[User link|https://junehomes.com/december_access/users/user/{juneos_user[2]}/change/]*.\n"
+                                            f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
+                                            jira_key=jira_key)
+
+                        juneos_auth = f.juneOS_devprod_authorization(dev_or_prod='prod')
+                        if juneos_auth[0] < 300:
+                            statuscode = juneos_auth[0]
+                            csrftoken = juneos_auth[1]
+                            sessionid = juneos_auth[2]
+                            token = juneos_auth[3]
+
+                            juneos_user_id = juneos_user[2]
+
+                            print()
+                            print('successfully authenticated in JuneOS production: ', statuscode)
+                            print('Trying to Assign groups')
+                            print()
+
+                            assigned_groups = f.assign_groups_to_user(user_id=juneos_user_id,
+                                                                      groups=groups,
+                                                                      dev_or_prod='prod',
+                                                                      token=token,
+                                                                      csrftoken=csrftoken,
+                                                                      sessionid=sessionid
+                                                                      )
+
+                            if assigned_groups[0] < 300:
+                                f.send_jira_comment('Groups in JuneOS are assigned to *[user|https://junehomes.com/december_access/'
+                                                    f'users/user/{juneos_user_id}/change/]*.\n',
+                                                    jira_key=jira_key)
+
+                            else:
+                                f.send_jira_comment('An error occurred while assigning groups to JuneOS user.\n'
+                                                    f'Error code: *{assigned_groups[0]}* \n\n'
+                                                    f'*{assigned_groups[1]}*',
+                                                    jira_key=jira_key)
+
+                        else:
+                            f.send_jira_comment('An error occurred while trying to authenticate on JuneOS.\n'
+                                                f'Error code: *{juneos_auth[0]}* \n\n'
+                                                f'*{juneos_auth[1]}*',
+                                                jira_key=jira_key)
+                    else:
+                        f.send_jira_comment('An error occurred while creating a JuneOS user.\n'
+                                            f'Error code: *{juneos_user[0]}* \n\n'
+                                            f'*{juneos_user[1]}*',
+                                            jira_key=jira_key)
+
+                elif organizational_unit == 'Resident Experience':
+                    print('Support, WIP')
+
+                    try:
+                        groups = f.get_juneos_groups_from_position_title(file_name='groups_resident_experience.json')[position_title]
+                        print("Group was found! ", groups)
+                    except Exception as error:
+                        print(KeyError(error))
+                        f.send_jira_comment(f'An error occurred while trying to search a user position:\n'
+                                            f'*{error}* for *{organizational_unit}*.\n'
+                                            f'Check if position exists in /permissions_by_orgunits/*groups_resident_experience.json*'
+                                            f' in and update json. Then try again.',
+                                            jira_key=jira_key)
+                        return KeyError(error)
 
                     juneos_user = f.create_juneos_user(first_name=first_name,
                                                        last_name=last_name,
@@ -607,13 +677,16 @@ if __name__ == 'mainfastapi':
                             final_draft = username.replace('{email}', f'<b>{suggested_email}</b>')
 
                         send_gmail_message.apply_async(
-                            ('ilya.konovalov@junehomes.com', f"{suggested_email}",
-                             # 'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                            ('ilya.konovalov@junehomes.com',
+                             f"{suggested_email}",
+                             'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
                              'Access to JuneOS property management system',
                              final_draft,
-                             round(unix_countdown_time / 3600)),
+                             round(unix_countdown_time / 3600)
+                             ),
                             queue='new_emps',
-                            countdown=round(unix_countdown_time))
+                            countdown=round(unix_countdown_time)
+                        )
 
                         f.send_jira_comment("*JuneOS* user created.\n"
                                             f"Username: *{suggested_email}*, \n"
@@ -623,24 +696,24 @@ if __name__ == 'mainfastapi':
 
                         juneos_auth = f.juneOS_devprod_authorization(dev_or_prod='prod')
                         if juneos_auth[0] < 300:
-                            # statuscode = juneos_auth[0]
-                            juneos_csrftoken = juneos_auth[1]
-                            juneos_sessionid = juneos_auth[2]
-                            juneos_token = juneos_auth[3]
+                            statuscode = juneos_auth[0]
+                            csrftoken = juneos_auth[1]
+                            sessionid = juneos_auth[2]
+                            token = juneos_auth[3]
 
                             juneos_user_id = juneos_user[2]
-                            print(juneos_user_id)
+
                             print()
-                            print('successfully authenticated in JuneOS.')
+                            print('successfully authenticated in JuneOS production: ', statuscode)
                             print('Trying to Assign groups')
                             print()
 
                             assigned_groups = f.assign_groups_to_user(user_id=juneos_user_id,
                                                                       groups=groups,
                                                                       dev_or_prod='prod',
-                                                                      token=juneos_token,
-                                                                      csrftoken=juneos_csrftoken,
-                                                                      sessionid=juneos_sessionid
+                                                                      token=token,
+                                                                      csrftoken=csrftoken,
+                                                                      sessionid=sessionid
                                                                       )
 
                             if assigned_groups[0] < 300:
@@ -649,24 +722,115 @@ if __name__ == 'mainfastapi':
                                                     jira_key=jira_key)
 
                             else:
-                                f.send_jira_comment('An error occured while assigning groups to JuneOS user.\n'
+                                f.send_jira_comment('An error occurred while assigning groups to JuneOS user.\n'
                                                     f'Error code: *{assigned_groups[0]}* \n\n'
                                                     f'*{assigned_groups[1]}*',
                                                     jira_key=jira_key)
 
                         else:
-                            f.send_jira_comment('An error occured while trying to authenticate on JuneOS.\n'
+                            f.send_jira_comment('An error occurred while trying to authenticate on JuneOS.\n'
                                                 f'Error code: *{juneos_auth[0]}* \n\n'
                                                 f'*{juneos_auth[1]}*',
                                                 jira_key=jira_key)
                     else:
-                        f.send_jira_comment('An error occured while creating a JuneOS user.\n'
+                        f.send_jira_comment('An error occurred while creating a JuneOS user.\n'
                                             f'Error code: *{juneos_user[0]}* \n\n'
                                             f'*{juneos_user[1]}*',
                                             jira_key=jira_key)
 
-                elif organizational_unit == 'Resident Support':
-                    print('Support, WIP')
+                elif organizational_unit == 'Performance Marketing':
+                    print('Performance Marketing, WIP')
+
+                    try:
+                        groups = f.get_juneos_groups_from_position_title(file_name='groups_performance_marketing.json')[position_title]
+                        print("Group was found! ", groups)
+                    except Exception as error:
+                        print(KeyError(error))
+                        f.send_jira_comment(f'An error occurred while trying to search a user position:\n'
+                                            f'*{error}* for *{organizational_unit}*.\n'
+                                            f'Check if position exists in /permissions_by_orgunits/*groups_performance_marketing.json*'
+                                            f' in and update json. Then try again.',
+                                            jira_key=jira_key)
+                        return KeyError(error)
+
+                    juneos_user = f.create_juneos_user(first_name=first_name,
+                                                       last_name=last_name,
+                                                       suggested_email=suggested_email,
+                                                       personal_phone=personal_phone,
+                                                       password=gmail_password,
+                                                       dev_or_prod='prod',
+                                                       )
+
+                    if juneos_user[0] < 300:
+                        # send event status as comment
+
+                        with open("C:\PythonProjects\Fastapi\email_templates\juneos_prod.txt", "r") as data:
+                            email_template = data.read()
+                            username = email_template.replace('{username}', f'<b>{first_name}</b>')
+                            final_draft = username.replace('{email}', f'<b>{suggested_email}</b>')
+
+                        send_gmail_message.apply_async(
+                            ('ilya.konovalov@junehomes.com',
+                             f"{suggested_email}",
+                             'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                             'Access to JuneOS property management system',
+                             final_draft,
+                             round(unix_countdown_time / 3600)
+                             ),
+                            queue='new_emps',
+                            countdown=round(unix_countdown_time)
+                        )
+
+                        f.send_jira_comment("*JuneOS* user created.\n"
+                                            f"Username: *{suggested_email}*, \n"
+                                            f"*[User link|https://junehomes.com/december_access/users/user/{juneos_user[2]}/change/]*.\n"
+                                            f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
+                                            jira_key=jira_key)
+
+                        juneos_auth = f.juneOS_devprod_authorization(dev_or_prod='prod')
+                        if juneos_auth[0] < 300:
+                            statuscode = juneos_auth[0]
+                            csrftoken = juneos_auth[1]
+                            sessionid = juneos_auth[2]
+                            token = juneos_auth[3]
+
+                            juneos_user_id = juneos_user[2]
+
+                            print()
+                            print('successfully authenticated in JuneOS production: ', statuscode)
+                            print('Trying to Assign groups')
+                            print()
+
+                            assigned_groups = f.assign_groups_to_user(user_id=juneos_user_id,
+                                                                      groups=groups,
+                                                                      dev_or_prod='prod',
+                                                                      token=token,
+                                                                      csrftoken=csrftoken,
+                                                                      sessionid=sessionid
+                                                                      )
+
+                            if assigned_groups[0] < 300:
+                                f.send_jira_comment('Groups in JuneOS are assigned to *[user|https://junehomes.com/december_access/'
+                                                    f'users/user/{juneos_user_id}/change/]*.\n',
+                                                    jira_key=jira_key)
+
+                            else:
+                                f.send_jira_comment('An error occurred while assigning groups to JuneOS user.\n'
+                                                    f'Error code: *{assigned_groups[0]}* \n\n'
+                                                    f'*{assigned_groups[1]}*',
+                                                    jira_key=jira_key)
+
+                        else:
+                            f.send_jira_comment('An error occurred while trying to authenticate on JuneOS.\n'
+                                                f'Error code: *{juneos_auth[0]}* \n\n'
+                                                f'*{juneos_auth[1]}*',
+                                                jira_key=jira_key)
+                    else:
+                        f.send_jira_comment('An error occurred while creating a JuneOS user.\n'
+                                            f'Error code: *{juneos_user[0]}* \n\n'
+                                            f'*{juneos_user[1]}*',
+                                            jira_key=jira_key)
+
                 else:
                     print(organizational_unit)
 

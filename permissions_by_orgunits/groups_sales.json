@@ -1,0 +1,22 @@
+{
+"Sales Trainee": [
+	27,
+	42 
+],
+"Sales Assistant": [
+	27, 
+	42
+],
+"Junior Sales Agent": [
+	27,
+	42
+],
+"Junior Leasing Agent": [
+	27,
+	30,
+	40
+],
+"Tour Manager": [
+	33
+]
+}

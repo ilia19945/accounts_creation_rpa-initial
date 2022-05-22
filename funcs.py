@@ -223,7 +223,7 @@ def send_jira_comment(message, jira_key):
 
 def juneOS_devprod_authorization(dev_or_prod):
     if dev_or_prod == 'dev':
-        print('dev was requested')
+        # print('dev was requested')
         url = "https://dev.junehomes.net/api/v2/auth/login-web-token/"
 
         payload = json.dumps({
@@ -231,7 +231,7 @@ def juneOS_devprod_authorization(dev_or_prod):
             "password": juneos_dev_password
         })
     elif dev_or_prod == 'prod':
-        print('prod was requested')
+        # print('prod was requested')
         url = "https://junehomes.com/api/v2/auth/login-web-token/"
 
         payload = json.dumps({
@@ -285,7 +285,7 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, p
 
     juneos_dev_user = requests.post(url=url, headers=headers, data=payload)
     if juneos_dev_user.status_code < 300:
-        print('user created')
+        print('User is created')
         # print(juneos_dev_user.json()['user'])
         return juneos_dev_user.status_code, \
                juneos_dev_user.json()['user'], \
@@ -296,37 +296,46 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, p
         return juneos_dev_user.status_code, juneos_dev_user.json()['errors']
 
 
-def assign_groups_to_user(user_id, groups, dev_or_prod, token, csrftoken, sessionid):
+def get_juneos_groups_from_position_title(
+        # position_title,
+                                          file_name,
+        # jira_key
+):
+    with open('C:\PythonProjects\Fastapi\permissions_by_orgunits\\' + file_name, "r") as data:
+        groups_sales = json.loads(data.read())
+        # try:
+        #     print(groups_sales[position_title])
+        # except KeyError as error:
+        #     print('KeyError when trying to match employee position with JuneOS groups!')
+        #     send_jira_comment(f"An error occurred while trying to match employee position with JuneOS groups. \n "
+        #                         f" No position with title: *{error}*",
+        #                         jira_key=jira_key)
+        return groups_sales
 
-    if dev_or_prod == 'dev':
+
+def assign_groups_to_user(user_id, groups, dev_or_prod, csrftoken, sessionid, token):
+    if dev_or_prod == 'prod':
+        print('assign_groups_to_user on prod was requested')
+        url = f"https://junehomes.com/api/v2/auth/users/{user_id}/"
+    elif dev_or_prod == 'dev':
+        print('assign_groups_to_user on dev was requested')
         url = f"https://dev.junehomes.net/api/v2/auth/users/{user_id}/"
-
-    elif dev_or_prod == 'prod':
-        url = f"https://dev.junehomes.net/api/v2/auth/users/{user_id}/"
-
     else:
-        return 'Error, wrong param dev_or_prod!'
+        return 500, 'Error, wrong param dev_or_prod!'
 
+    headers = {
+        'Authorization': f'{token}',
+        'Content-Type': 'application/json',
+        'Cookie': f'csrftoken={csrftoken}; sessionid={sessionid}'
+    }
     payload = json.dumps({
         "is_staff": True,
         "groups": groups
     })
-    headers = {
-        'accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {token}',
-        'Cookie': f'sessionid={sessionid};csrftoken={csrftoken}'
-    }
-
-    print(url)
-    print()
-    print(headers)
-    print()
-    print(payload)
 
     response = requests.request("PATCH", url, headers=headers, data=payload)
 
-    print(response.text)
+    print(response.json())
     return response.status_code, response.json()
 
 
