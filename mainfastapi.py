@@ -399,6 +399,7 @@ if __name__ == 'mainfastapi':
                     f.send_jira_comment('not a user email!',
                                         jira_key=jira_key)
                 else:
+                    # переписать функцию на поиск аналоги через search
                     amazon_result = f.create_amazon_user(suggested_email=suggested_email,
                                                          first_name=first_name,
                                                          last_name=last_name,
@@ -445,17 +446,22 @@ if __name__ == 'mainfastapi':
 
             elif jira_new_status == 'Create a JuneOS account':
 
-                with open(r'''C:\Users\ilia1\Desktop\June Homes\User Accounts.txt''', 'r', encoding='utf-8') as data:
-                    parsed_text = re.split(': |\n', data.read())[::-1]  # to search from the end of the list
-                    try:
-                        gmail_password = parsed_text[parsed_text.index(suggested_email) - 2]
-                        # print(gmail_password)
-                    except Exception as error:
-                        print(error)
-                        f.send_jira_comment(f"An error occurred while trying to retrieve user password: \n "
-                                            f"*{error}*",
-                                            jira_key=jira_key)
-                        return error
+                # Done + выпилить копирование пароля для juneos юзера и ставить 35 символьные уникальные и записывать в файл.
+
+                # with open(r'''C:\Users\ilia1\Desktop\June Homes\User Accounts.txt''', 'r', encoding='utf-8') as data:
+                #     parsed_text = re.split(': |\n', data.read())[::-1]  # to search from the end of the list
+                #     for i in range(len(parsed_text)):
+                #         parsed_text.append(parsed_text[i].strip())
+                #     try:
+                #         juneos_password = parsed_text[parsed_text.index(suggested_email) - 2]
+                #         # print(juneos_password)
+                #     except Exception as error:
+                #         print(error)
+                #         f.send_jira_comment(f"An error occurred while trying to retrieve user password: \n "
+                #                             f"*{error}*",
+                #                             jira_key=jira_key)
+                #         return error
+
 
                 if organizational_unit == 'Technology':
 
@@ -477,7 +483,6 @@ if __name__ == 'mainfastapi':
                                                        last_name=last_name,
                                                        suggested_email=suggested_email,
                                                        personal_phone=personal_phone,
-                                                       password=gmail_password,
                                                        dev_or_prod='dev',
                                                        )
 
@@ -571,7 +576,6 @@ if __name__ == 'mainfastapi':
                                                        last_name=last_name,
                                                        suggested_email=suggested_email,
                                                        personal_phone=personal_phone,
-                                                       password=gmail_password,
                                                        dev_or_prod='prod',
                                                        )
 
@@ -664,7 +668,6 @@ if __name__ == 'mainfastapi':
                                                        last_name=last_name,
                                                        suggested_email=suggested_email,
                                                        personal_phone=personal_phone,
-                                                       password=gmail_password,
                                                        dev_or_prod='prod',  # change to prod when prod will be released
                                                        )
 
@@ -757,7 +760,6 @@ if __name__ == 'mainfastapi':
                                                        last_name=last_name,
                                                        suggested_email=suggested_email,
                                                        personal_phone=personal_phone,
-                                                       password=gmail_password,
                                                        dev_or_prod='prod',
                                                        )
 

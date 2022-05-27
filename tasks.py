@@ -10,6 +10,8 @@ celery_app = Celery('tasks', backend='redis://localhost', broker='redis://localh
 
 # to run celery with 3 queues type in terminal:
 # celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other -P gevent
+# to run flower with admin user:
+# celery -A tasks flower --basic_auth=admin:admin
 
 @celery_app.task
 def send_gmail_message(sender, to, cc, subject, message_text, countdown):

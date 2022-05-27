@@ -259,7 +259,7 @@ def juneOS_devprod_authorization(dev_or_prod):
         return response.status_code, response.text
 
 
-def create_juneos_user(first_name, last_name, suggested_email, personal_phone, password, dev_or_prod):
+def create_juneos_user(first_name, last_name, suggested_email, personal_phone, dev_or_prod):
     if dev_or_prod == 'dev':
         url = "https://dev.junehomes.net/api/v2/auth/registration/"
     elif dev_or_prod == 'prod':
@@ -272,6 +272,11 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, p
         'Content-Type': 'application/json'
 
     }
+
+    characters = string.ascii_letters + string.digits + string.punctuation
+    password = ''.join(random.choice(characters) for i in range(35))
+    print('suggested_email: ', suggested_email, ' ; password: ', password)
+
     payload = json.dumps({
         "email": suggested_email,
         "first_name": first_name,
@@ -407,6 +412,98 @@ def create_draft_message(sender, to, cc, subject, message_text):
 # test:
 # print(create_draft_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com',cc='', subject='subject', message_text='test message'))
 
+ #переписать на поиск через search а не через list
+def create_amazon_user_old(suggested_email, first_name, last_name, user_email_analogy):
+    client = boto3.client('connect')
+    instance_id = 'a016cbe1-24bf-483a-b2cf-a73f2f389cb4'
+    # amazon_user_id = None
+    characters = string.ascii_letters + string.digits + string.punctuation
+    password = ''.join(random.choice(characters) for i in range(16))
+
+    # if user_email_analogy is None:
+    #     return 'No user with specified email!'
+    #
+    # else:
+
+    # receives a list of users
+    response = client.list_users(
+        InstanceId=instance_id,
+        MaxResults=100
+    )
+    # print(len(response['UserSummaryList']))
+    i = 0
+    user_list = []
+
+    while True:
+        i += 1
+
+        try:
+            a = response['NextToken']
+            user_list += response['UserSummaryList']
+            response = client.list_users(
+                InstanceId=instance_id,
+                MaxResults=1,
+                NextToken=response['NextToken']
+            )
+            print('Iteration number:', i)
+        except KeyError:
+            break
+
+    # pprint(user_list, indent=1)  # list of users on amazon
+    # pprint(len(user_list), indent=1)
+    # pprint(type(user_list), indent=1)
+
+    #  checking if the user from ticket is in the amazon user list
+    for i in range(len(user_list)):
+
+        if user_list[i]['Username'] == user_email_analogy:
+            # print(user_list[i]['Username'])
+            amazon_user_id = user_list[i]['Id']
+            print(amazon_user_id)
+
+            # receive a user description from amazon
+            response = client.describe_user(
+                UserId=str(amazon_user_id),
+                InstanceId=instance_id
+            )
+            # creating a user
+
+            try:
+                response = client.create_user(
+                    Username=suggested_email,
+                    Password=password,
+                    IdentityInfo={
+                        'FirstName': first_name,
+                        'LastName': last_name,
+                        'Email': suggested_email
+                    },
+                    PhoneConfig={
+                        'PhoneType': response['User']['PhoneConfig']['PhoneType'],
+                        'AutoAccept': response['User']['PhoneConfig']['AutoAccept'],
+                        'AfterContactWorkTimeLimit': 60
+                    },
+                    # DirectoryUserId='string',
+                    SecurityProfileIds=response['User']['SecurityProfileIds'],
+                    RoutingProfileId=response['User']['RoutingProfileId'],
+                    # HierarchyGroupId='string',
+                    InstanceId=instance_id,
+                    Tags={}
+                )
+            except Exception as error:
+                return error
+
+            pprint(response, indent=1)
+
+            file = open(r'''C:\Users\ilia1\Desktop\June Homes\User Accounts.txt''', 'a', encoding='utf-8')
+            file.write(f"Amazon username: {suggested_email}\nPassword: {password}\n\n")
+            file.close()
+
+            return response, password
+
+        else:
+            print(f"'{user_list[i]['Username']}' - {user_email_analogy}")
+            pass
+
 
 def create_amazon_user(suggested_email, first_name, last_name, user_email_analogy):
     client = boto3.client('connect')
@@ -498,6 +595,7 @@ def create_amazon_user(suggested_email, first_name, last_name, user_email_analog
         else:
             print(f"'{user_list[i]['Username']}' - {user_email_analogy}")
             pass
+
 
 
 def delete_amazon_user(user_email):
