@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 import requests
 import string
@@ -10,6 +11,7 @@ from email.mime.text import MIMEText
 import base64
 import boto3
 from pprint import pprint
+import fast_api_logging as fl
 
 # functions
 # just receives google application info
@@ -32,7 +34,7 @@ def get_app_info(arg):
 
 
 # returns the actual token
-def get_actual_token(arg):  # ОБРАТИ ВНИМАНИЕ ЧТО ИСПОЛЬЗУЕТСЯ ФАЙЛ tokens2!!! НА БОЮ ПЕРЕКЛЮЧИТЬ НА TOKENS.JSON
+def get_actual_token(arg):
     with open(r'''C:\PythonProjects\Fastapi\access_refresh_tokens.json''') as data:
         # open the file and parse it to the latest json
         newest_data = data.read().split('\n')[-2]
@@ -205,6 +207,8 @@ def adding_user_to_google_group(gmail_groups_refined, suggested_email):
             # print(assign_google_group.status_code)
         # print(assign_google_group.json())
     # print(final_row)
+    logging.debug(f"(3/3) Assigned google groups:\n"
+                  f"{final_str}")
     return final_str
 
 
@@ -256,6 +260,7 @@ def juneOS_devprod_authorization(dev_or_prod):
                response.json()['token']
     except:
         print('Status code:', response.status_code)
+        print('Status code:', response.json())
         return response.status_code, response.text
 
 
@@ -275,7 +280,7 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
 
     characters = string.ascii_letters + string.digits + string.punctuation
     password = ''.join(random.choice(characters) for i in range(35))
-    print('suggested_email: ', suggested_email, ' ; password: ', password)
+    print('suggested_email:', suggested_email, ' ; password:', password)
 
     payload = json.dumps({
         "email": suggested_email,
@@ -288,17 +293,17 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
         "is_staff": True
     })
 
-    juneos_dev_user = requests.post(url=url, headers=headers, data=payload)
-    if juneos_dev_user.status_code < 300:
+    juneos_user = requests.post(url=url, headers=headers, data=payload)
+    if juneos_user.status_code < 300:
         print('User is created')
-        # print(juneos_dev_user.json()['user'])
-        return juneos_dev_user.status_code, \
-               juneos_dev_user.json()['user'], \
-               juneos_dev_user.json()['user']['id']
+        # print(juneos_user.json()['user'])
+        return juneos_user.status_code, \
+               juneos_user.json()['user'], \
+               juneos_user.json()['user']['id']
 
     else:  # if error
-        print(juneos_dev_user.json()['errors'])
-        return juneos_dev_user.status_code, juneos_dev_user.json()['errors']
+        print(juneos_user.json()['errors'])
+        return juneos_user.status_code, juneos_user.json()['errors']
 
 
 def get_juneos_groups_from_position_title(
