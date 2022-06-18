@@ -5,8 +5,10 @@ from celery import Celery
 
 from email.mime.text import MIMEText
 import smtplib
+import fast_api_logging as fl
 
-celery_app = Celery('tasks', backend='redis://localhost', broker='redis://localhost',queue='new_emps,terminations,other')
+celery_app = Celery('tasks', backend='redis://localhost', broker='redis://localhost', queue='new_emps,terminations,other')
+fl.info('Server has successfully started')
 
 # to run celery with 3 queues type in terminal:
 # celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other -P gevent
@@ -26,7 +28,9 @@ def send_gmail_message(sender, to, cc, subject, message_text, countdown):
     server.login(sender, gmail_app_password)
     server.sendmail(sender, to, message.as_string())
     server.quit()
+    fl.info(f'Message will be sent to:{to}, hours to send: {countdown}')
     return f'Message was successfully sent to:{to}, hours to send: {countdown}'
+
 
 # result = send_gmail_message.apply_async(
 #                                         ('ilya.konovalov@junehomes.com',
@@ -55,8 +59,8 @@ def add(x, y):
     time.sleep(600)
     return x + y
 
+
 @celery_app.task
 def multiply(x, y):
     time.sleep(10)
     return x * y
-

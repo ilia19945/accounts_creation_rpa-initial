@@ -1,5 +1,5 @@
 import json
-import logging
+# import logging
 import time
 import requests
 import string
@@ -80,7 +80,7 @@ def exchange_auth_code_to_access_refresh_token(code, jira_key):
     response = requests.post(request_row)  # send and receives response
 
     # print(response.headers)  # receives headers in dict
-    logging.debug(response.json())  # receives body in dict
+    fl.debug(response.json())  # receives body in dict
     refreshed_token = response.json()
     if refreshed_token.get("error") is None:
         refreshed_token['datetime'] = str(time.time_ns())[0:10]  # append datetime to dict
@@ -92,14 +92,14 @@ def exchange_auth_code_to_access_refresh_token(code, jira_key):
         file = open('access_refresh_tokens.json', 'a')
         file.write(str(refreshed_token) + '\n')
         file.close()
-        logging.info('Step 5 executed successfully! Auth code has been exchanged to an access token.\n'
+        fl.info('Step 5 executed successfully! Auth code has been exchanged to an access token.\n'
               'Please repeat creating a user account attempt.')
         send_jira_comment('Current Auth token was irrelevant and has been exchanged to a new token.\n'
                           'Please repeat creating a user account attempt.\n'
-                          '(Switch the ticket status -> *"In Progress"* -> *"Create user accounts!"*)',
+                          '(Switch the ticket status -> *"In Progress"* -> *"Create a Google account!"*)',
                           jira_key)
     else:
-        logging.info(response)
+        fl.info(response)
 
 
 # initiates the refreshing token process WHEN WE HAVE REFRESH TOKEN in the latest google response
@@ -126,7 +126,7 @@ def refresh_token_func():
     file.write(str(refreshed_token) + '\n')
 
     file.close()
-    logging.info('access_refresh_tokens.json - appended!\nRefresh token was exchanged successfully.')
+    fl.info('access_refresh_tokens.json - appended!\nRefresh token was exchanged successfully.')
 
 
 # https://developers.google.com/admin-sdk/directory/v1/guides/manage-users
@@ -138,7 +138,7 @@ def create_google_user_req(first_name, last_name, suggested_email, organizationa
 
     file = open(r'''C:\Users\ilia1\Desktop\June Homes\User Accounts.txt''', 'a', encoding='utf-8')
 
-    logging.debug(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
+    fl.debug(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
     url = 'https://admin.googleapis.com/admin/directory/v1/users/'
     headers = {
         'Authorization': f'Bearer {get_actual_token("access_token")}'
@@ -168,10 +168,10 @@ def create_google_user_req(first_name, last_name, suggested_email, organizationa
         file.write(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
         file.close()
     elif response.status_code >= 500:
-        logging.error("an error on the google side occurred while creating a google user:\n" + response.json())
+        fl.error("an error on the google side occurred while creating a google user:\n" + response.json())
         return response.status_code, response.__dict__
     else:
-        logging.error("an error occurred while creating a google user\n" + response.json())
+        fl.error("an error occurred while creating a google user\n" + response.json())
     return response.status_code, response.__dict__, password
 
 
@@ -205,7 +205,7 @@ def adding_user_to_google_group(gmail_groups_refined, suggested_email):
             # print(assign_google_group.status_code)
         # print(assign_google_group.json())
     # print(final_row)
-    logging.debug(f"(3/3) Assigned google groups:\n"
+    fl.debug(f"(3/3) Assigned google groups:\n"
                   f"{final_str}")
     return final_str
 
@@ -242,7 +242,7 @@ def juneOS_devprod_authorization(dev_or_prod):
         })
 
     else:
-        logging.error('check func params')
+        fl.error('check func params')
         return None
 
     headers = {
@@ -257,7 +257,7 @@ def juneOS_devprod_authorization(dev_or_prod):
                response.cookies['sessionid'], \
                response.json()['token']
     except:
-        logging.error(f'Status code:{response.status_code}\n'
+        fl.error(f'Status code:{response.status_code}\n'
                       f'{response.json()}')
         return response.status_code, response.text
 
@@ -268,7 +268,7 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
     elif dev_or_prod == 'prod':
         url = "https://junehomes.com/api/v2/auth/registration/"
     else:
-        logging.error('check dev or prod param')
+        fl.error('check dev or prod param')
         return None
     headers = {
         'accept': 'application/json',
@@ -278,7 +278,7 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
 
     characters = string.ascii_letters + string.digits + string.punctuation
     password = ''.join(random.choice(characters) for i in range(35))
-    logging.debug('suggested_email:', suggested_email, ' ; password:', password)
+    fl.debug(f'suggested_email: {suggested_email} password: {password}')
 
     payload = json.dumps({
         "email": suggested_email,
@@ -293,14 +293,14 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
 
     juneos_user = requests.post(url=url, headers=headers, data=payload)
     if juneos_user.status_code < 300:
-        logging.info('User is created')
+        fl.info('User is created')
         # print(juneos_user.json()['user'])
         return juneos_user.status_code, \
                juneos_user.json()['user'], \
                juneos_user.json()['user']['id']
 
     else:  # if error
-        logging.error(juneos_user.json()['errors'])
+        fl.info(juneos_user.json()['errors'])
         return juneos_user.status_code, juneos_user.json()['errors']
 
 
@@ -323,10 +323,10 @@ def get_juneos_groups_from_position_title(
 
 def assign_groups_to_user(user_id, groups, dev_or_prod, csrftoken, sessionid, token):
     if dev_or_prod == 'prod':
-        logging.debug('assign_groups_to_user on prod was requested')
+        fl.debug('assign_groups_to_user on prod was requested')
         url = f"https://junehomes.com/api/v2/auth/users/{user_id}/"
     elif dev_or_prod == 'dev':
-        logging.debug('assign_groups_to_user on dev was requested')
+        fl.debug('assign_groups_to_user on dev was requested')
         url = f"https://dev.junehomes.net/api/v2/auth/users/{user_id}/"
     else:
         return 500, 'Error, wrong param dev_or_prod!'
@@ -343,7 +343,7 @@ def assign_groups_to_user(user_id, groups, dev_or_prod, csrftoken, sessionid, to
 
     response = requests.request("PATCH", url, headers=headers, data=payload)
 
-    logging.debug(response.json())
+    fl.debug(response.json())
     return response.status_code, response.json()
 
 
@@ -448,7 +448,7 @@ def create_amazon_user(suggested_email, first_name, last_name, user_email_analog
                 MaxResults=1,
                 NextToken=response['NextToken']
             )
-            logging.debug('Iteration number:', i)
+            fl.debug(f'Iteration number: {str(i)}')
         except KeyError:
             break
 
@@ -462,7 +462,7 @@ def create_amazon_user(suggested_email, first_name, last_name, user_email_analog
         if user_list[i]['Username'] == user_email_analogy:
             # print(user_list[i]['Username'])
             amazon_user_id = user_list[i]['Id']
-            logging.info(amazon_user_id)
+            fl.info(amazon_user_id)
 
             # receive a user description from amazon
             response = client.describe_user(
@@ -496,7 +496,7 @@ def create_amazon_user(suggested_email, first_name, last_name, user_email_analog
                 return error
 
             # pprint(response, indent=1)
-            logging.info(response)
+            fl.info(response)
 
             file = open(r'''C:\Users\ilia1\Desktop\June Homes\User Accounts.txt''', 'a', encoding='utf-8')
             file.write(f"Amazon username: {suggested_email}\nPassword: {password}\n\n")
@@ -506,7 +506,7 @@ def create_amazon_user(suggested_email, first_name, last_name, user_email_analog
 
         else:
             # print(f"'{user_list[i]['Username']}' - {user_email_analogy}")
-            logging.info(f"'{user_list[i]['Username']}' - {user_email_analogy}")
+            fl.info(f"'{user_list[i]['Username']}' - {user_email_analogy}")
             pass
 
 # мб эту раскомментить
