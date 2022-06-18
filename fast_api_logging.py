@@ -50,7 +50,6 @@ logger.addHandler(file_handler)
 
 logger.setLevel('DEBUG')
 
-
 # filters are not used for now
 class InfoFilter(logging.Filter):
     def filter(self, record):
@@ -67,7 +66,6 @@ class DebugFilter(logging.Filter):
 class ErrorCriticalFilter(logging.Filter):
     def filter(self, record):
         return record.levelname in ['ERROR', 'CRITICAL']
-
 
 # filters are not connected
 # https://docs.python.org/3/library/logging.html
