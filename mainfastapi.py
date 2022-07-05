@@ -36,7 +36,7 @@ app = FastAPI()
 
 # https://www.elastic.co/guide/en/apm/agent/python/current/starlette-support.html#starlette-fastapi
 # app.add_middleware(ElasticAPM, client=fl.apm)
-
+global jira_key
 jira_key = ''
 
 # triggers
@@ -48,7 +48,7 @@ jira_key = ''
 
 if __name__ == 'mainfastapi':
 
-    fl.info('The server has successfully started.')
+    fl.info('Fast API server has successfully started.')
 
 
     @app.get("/"
@@ -57,7 +57,8 @@ if __name__ == 'mainfastapi':
              )
     async def redirect_from_google(code: Optional[str] = Query(None,
                                                                description='authorization code from google '
-                                                                           'https://developers.google.com/identity/protocols/oauth2/web-serverexchange-authorization-code'),
+                                                                           'https://developers.google.com/identity/protocols/oauth2/web'
+                                                                           '-serverexchange-authorization-code'),
                                    error: str = Query(None,
                                                       description='The error param google send us when the user denies to confirm authorization')
                                    ):
@@ -100,6 +101,7 @@ if __name__ == 'mainfastapi':
         detect_action = body['changelog']['items'][0]['toString']
         fl.info(f"Change type: {detect_change_type}")
         if detect_change_type == 'status':
+
             jira_old_status = body['changelog']['items'][0]['fromString']
             jira_new_status = body['changelog']['items'][0]['toString']
             jira_description = re.split(': |\n', body['issue']['fields']['description'])
@@ -232,6 +234,9 @@ if __name__ == 'mainfastapi':
                                             "(Switch the ticket status -> \"In Progress\" -> \" Create a Google account\")", jira_key)
 
                 else:
+
+                    # add emails for tests here if needed.
+
                     fl.info('Access token is actual. Suggested user email will be checked to the uniqueness.')
                     url = f"https://admin.googleapis.com/admin/directory/v1/users/{suggested_email}"
                     payload = {}
@@ -320,9 +325,9 @@ if __name__ == 'mainfastapi':
 
                             send_gmail_message.apply_async(
                                 ('ilya.konovalov@junehomes.com',
-                                 personal_email,
-                                 f'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com;{supervisor_email}',
-                                 'June Homes: corporate email account',
+                                 [personal_email],
+                                 ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', supervisor_email],
+                                 '[TEST]June Homes: corporate email account',
                                  final_draft,
                                  round(unix_countdown_time / 3600)),
                                 queue='new_emps',
@@ -350,8 +355,8 @@ if __name__ == 'mainfastapi':
 
                                 send_gmail_message.apply_async(
                                     ('ilya.konovalov@junehomes.com',
-                                     suggested_email,
-                                     '',
+                                     [suggested_email],
+                                     [],
                                      'IT services and policies',
                                      final_draft,
                                      round(unix_countdown_time / 3600)),
@@ -373,8 +378,8 @@ if __name__ == 'mainfastapi':
 
                                 send_gmail_message.apply_async(
                                     ('ilya.konovalov@junehomes.com',
-                                     suggested_email,
-                                     '',
+                                     [suggested_email],
+                                     [],
                                      'IT services and policies',
                                      final_draft,
                                      round(unix_countdown_time / 3600)),
@@ -466,8 +471,8 @@ if __name__ == 'mainfastapi':
                             # print(final_draft)
                             send_gmail_message.apply_async(
                                 ('ilya.konovalov@junehomes.com',
-                                 suggested_email,
-                                 'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                                 [suggested_email],
+                                 ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
                                  'Access to Amazon Connect call center',
                                  final_draft,
                                  round(unix_countdown_time / 3600)),
@@ -490,7 +495,7 @@ if __name__ == 'mainfastapi':
 
                 if organizational_unit == 'Technology':
                     '''Группы добавлять вручную в json файле'''
-                    '''Для Technology всегда ставится галка суперюзер вручную'''
+                    '''Для Technology всегда ставится галка супер юзер вручную'''
 
                     try:
                         groups = f.get_juneos_groups_from_position_title(file_name='groups_technology.json')[position_title]
@@ -528,8 +533,8 @@ if __name__ == 'mainfastapi':
                         send_gmail_message.apply_async(
                             (
                                 'ilya.konovalov@junehomes.com',
-                                f"{suggested_email}",
-                                'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                                [suggested_email],
+                                ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
                                 'Access to JuneOS.Development property management system',
                                 final_draft,
                                 round(unix_countdown_time / 3600)
@@ -584,8 +589,8 @@ if __name__ == 'mainfastapi':
 
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
-                             f"{suggested_email}",
-                             'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                             [suggested_email],
+                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
                              'Access to JuneOS property management system',
                              final_draft,
                              round(unix_countdown_time / 3600)
@@ -695,8 +700,8 @@ if __name__ == 'mainfastapi':
 
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
-                             f"{suggested_email}",
-                             'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                             [suggested_email],
+                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
                              'Access to JuneOS property management system',
                              final_draft,
                              round(unix_countdown_time / 3600)
@@ -741,8 +746,8 @@ if __name__ == 'mainfastapi':
 
                             else:
                                 fl.error('An error occurred while assigning groups to JuneOS user.\n'
-                                        f'Error code: *{assigned_groups[0]}* \n\n'
-                                        f'*{assigned_groups[1]}')
+                                         f'Error code: *{assigned_groups[0]}* \n\n'
+                                         f'*{assigned_groups[1]}')
                                 f.send_jira_comment('An error occurred while assigning groups to JuneOS user.\n'
                                                     f'Error code: *{assigned_groups[0]}* \n\n'
                                                     f'*{assigned_groups[1]}*',
@@ -750,16 +755,16 @@ if __name__ == 'mainfastapi':
 
                         else:
                             fl.error('An error occurred while trying to authenticate on JuneOS.\n'
-                                    f'Error code: *{juneos_auth[0]}* \n\n'
-                                    f'*{juneos_auth[1]}*')
+                                     f'Error code: *{juneos_auth[0]}* \n\n'
+                                     f'*{juneos_auth[1]}*')
                             f.send_jira_comment('An error occurred while trying to authenticate on JuneOS.\n'
                                                 f'Error code: *{juneos_auth[0]}* \n\n'
                                                 f'*{juneos_auth[1]}*',
                                                 jira_key=jira_key)
                     else:
                         fl.error('An error occurred while creating a JuneOS user.\n'
-                                f'Error code: *{juneos_user[0]}* \n\n'
-                                f'*{juneos_user[1]}*')
+                                 f'Error code: *{juneos_user[0]}* \n\n'
+                                 f'*{juneos_user[1]}*')
                         f.send_jira_comment('An error occurred while creating a JuneOS user.\n'
                                             f'Error code: *{juneos_user[0]}* \n\n'
                                             f'*{juneos_user[1]}*',
@@ -797,8 +802,8 @@ if __name__ == 'mainfastapi':
 
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
-                             f"{suggested_email}",
-                             'idelia@junehomes.com;ivan@junehomes.com;artyom@junehomes.com',
+                             [suggested_email],
+                            ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
                              'Access to JuneOS property management system',
                              final_draft,
                              round(unix_countdown_time / 3600)
@@ -835,9 +840,16 @@ if __name__ == 'mainfastapi':
 
                             if assigned_groups[0] < 300:
                                 fl.info('groups assigned')
-                                f.send_jira_comment('Groups in JuneOS are assigned to *[user|https://junehomes.com/december_access/'
-                                                    f'users/user/{juneos_user_id}/change/]*.\n',
-                                                    jira_key=jira_key)
+                                if position_title in ["Property manager", "Property Manager"]:
+                                    f.send_jira_comment(f"Groups in JuneOS are successfully assigned to *[user|https://junehomes.com/december_access/"
+                                                        f"users/user/{juneos_user_id}/change/]*.\n"
+                                                        f"*Don't forget to add user to {position_title}s on juneOS.*\n"
+                                                        f"*[LINK|https://junehomes.com/december_access/staff/propertymanager/add/]*",
+                                                        jira_key=jira_key)
+                                else:
+                                    f.send_jira_comment('Groups in JuneOS are successfully assigned to *[user|https://junehomes.com/december_access/'
+                                                        f'users/user/{juneos_user_id}/change/]*.\n',
+                                                        jira_key=jira_key)
 
                             else:
                                 fl.error('An error occurred while assigning groups to JuneOS user.\n'
@@ -874,6 +886,190 @@ if __name__ == 'mainfastapi':
 
             else:
                 fl.debug('Got a status change different from what triggers the user account creation.')
+
+        else:
+            fl.debug(f"The field \"{detect_change_type}\" was changed to: \"{detect_action}\". \n"
+                     "Nothing will be done. Awaiting for the other request")
+            pass
+
+
+    @app.post("/maintenance_hiring", status_code=200)
+    async def main_flow(
+            body: dict = Body(...)
+    ):
+        jira_key = body['issue']['key']
+
+        detect_change_type = body['changelog']['items'][0]['field']
+        detect_action = body['changelog']['items'][0]['toString']
+        fl.info(f"Change type: {detect_change_type}")
+        if detect_change_type == 'status':
+            jira_old_status = body['changelog']['items'][0]['fromString']
+            jira_new_status = body['changelog']['items'][0]['toString']
+            jira_description = re.split(': |\n', body['issue']['fields']['description'])
+            fl.info(f"Key: {jira_key}")
+            fl.info(f"Old Status: {jira_old_status}; New Status: {jira_new_status}")
+            print(jira_description)
+
+            position_title = jira_description[jira_description.index('*Position title*') + 1]
+            first_name = jira_description[jira_description.index('*First name*') + 1]
+            last_name = jira_description[jira_description.index('*Last name*') + 1]
+
+            personal_email = jira_description[jira_description.index('*Personal email*') + 1].split("|")[0][
+                             0:(len(jira_description[jira_description.index('*Personal email*') + 1]))]
+            #  avoid sending email address in "[name@junehomes.com|mailto:name@junehomes.com]" - string format
+            if personal_email[0:1] == '[':
+                personal_email = personal_email[1:]
+            elif personal_email == '':
+                personal_email = jira_description[jira_description.index('h4. Personal email') + 1].split("|")[0]
+                if personal_email[0:1] == '[':
+                    personal_email = personal_email[1:]
+
+            personal_phone = jira_description[jira_description.index('*Personal phone number*') + 1]
+            # supervisor_email = jira_description[jira_description.index('*Supervisor (whom reports to)*') + 1]
+
+            hire_start_date = jira_description[jira_description.index('*Start date (IT needs 3 working days to create accounts)*') + 1]
+            unix_hire_start_date = datetime.strptime(hire_start_date, '%m/%d/%Y').timestamp()  # unix by the 00:00 AM
+
+            fl.debug(f"The type of the date is now {str(unix_hire_start_date)}")
+            unix_countdown_time = unix_hire_start_date - round(time.time())
+            print(unix_countdown_time)
+            if unix_countdown_time <= 0:
+                unix_countdown_time = 0
+
+            groups = f.get_juneos_groups_from_position_title(file_name='groups_maintenance.json')[position_title]
+            print(f"the group was found! \n{str(groups)}")
+
+            fl.debug(f"time for task countdown in hours: {str(unix_countdown_time / 3600)}")
+            if jira_new_status == 'Create a JuneOS account':
+
+                fl.debug('Maintenance employee')
+
+                try:
+                    groups = f.get_juneos_groups_from_position_title(file_name='groups_maintenance.json')[position_title]
+                    fl.debug(f"the group was found!: \n{str(groups)}")
+
+                except Exception as error:
+                    fl.error(error)
+                    f.send_jira_comment(f'An error occurred while trying to search a user position:\n'
+                                        f'*{error}* for *{position_title}*.\n'
+                                        f'Check if position exists in /permissions_by_orgunits/*groups_maintenance.json*'
+                                        f' in and update json. Then try again.',
+                                        jira_key=jira_key)
+                    return KeyError(error)
+
+                juneos_user = f.create_juneos_user(first_name=first_name,
+                                                   last_name=last_name,
+                                                   suggested_email=personal_email,
+                                                   personal_phone=personal_phone,
+                                                   dev_or_prod='prod',
+                                                   )
+
+                if juneos_user[0] < 300:
+                    # send event status as comment
+                    fl.info(f'User: {personal_email} is created successfully!')
+                    with open("C:\PythonProjects\Fastapi\email_templates\juneos_prod.txt", "r") as data:
+                        email_template = data.read()
+                        username = email_template.replace('{username}', f'<b>{first_name}</b>')
+                        final_draft = username.replace('{email}', f'<b>{personal_email}</b>')
+
+                    send_gmail_message.apply_async(
+                        ('ilya.konovalov@junehomes.com',
+                         [personal_email],
+                         ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
+                         'Access to JuneOS property management system',
+                         final_draft,
+                         round(unix_countdown_time / 3600)
+                         ),
+                        queue='new_emps',
+                        countdown=round(unix_countdown_time)
+                    )
+                    fl.info(f"email 'Access to JuneOS property management system' will be sent in: {round(unix_countdown_time / 3600)}*, \n")
+
+                    # creating a proper link for juneos reference
+
+                    if position_title == "Property manager":
+                        link = "propertymanager/add/"
+                    elif position_title == "Housekeeper":
+                        link = "housekeeper/add/"
+                    elif position_title == "City manager":
+                        link = "citymanager/add/"
+                    else:
+                        link = "/"
+
+                    f.send_jira_comment("*JuneOS* user created.\n"
+                                        f"Username: *{personal_email}*, \n"
+                                        f"*[User link|https://junehomes.com/december_access/users/user/{juneos_user[2]}/change/]*.\n"
+                                        f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.\n"
+                                        f"*Don\'t forget to add user to {position_title}s on juneOS.*\n"
+                                        f"*[LINK|https://junehomes.com/december_access/staff/{link}]*",
+                                        jira_key=jira_key)
+                    try:
+                        juneos_auth = f.juneOS_devprod_authorization(dev_or_prod='prod')
+                    except Exception as error:
+                        fl.error(error)
+
+                    if juneos_auth[0] < 300:
+                        statuscode = juneos_auth[0]
+                        csrftoken = juneos_auth[1]
+                        sessionid = juneos_auth[2]
+                        token = juneos_auth[3]
+
+                        juneos_user_id = juneos_user[2]
+
+                        fl.info(f"successfully authenticated in JuneOS production: {str(statuscode)}")
+                        fl.debug('Trying to Assign groups')
+
+                        try:
+                            assigned_groups = f.assign_groups_to_user(user_id=juneos_user_id,
+                                                                      groups=groups,
+                                                                      dev_or_prod='prod',
+                                                                      token=token,
+                                                                      csrftoken=csrftoken,
+                                                                      sessionid=sessionid
+                                                                      )
+                        except Exception as error:
+                            fl.error(error)
+
+                        if assigned_groups[0] < 300:
+                            fl.info('groups assigned')
+
+                            f.send_jira_comment('Groups in JuneOS are assigned to *[user|https://junehomes.com/december_access/'
+                                                f'users/user/{juneos_user_id}/change/]*.\n',
+                                                jira_key=jira_key)
+
+                        else:
+
+                            f.send_jira_comment('An error occurred while assigning groups to JuneOS user.\n'
+                                                f'Error code: *{assigned_groups[0]}* \n\n'
+                                                f'*{assigned_groups[1]}*',
+                                                jira_key=jira_key)
+
+                            fl.error('An error occurred while assigning groups to JuneOS user.\n'
+                                     f'Error code: *{assigned_groups[0]}* \n\n'
+                                     f'*{assigned_groups[1]}')
+
+                    else:
+                        fl.error('An error occurred while trying to authenticate on JuneOS.\n'
+                                 f'Error code: *{juneos_auth[0]}* \n\n'
+                                 f'*{juneos_auth[1]}*')
+                        f.send_jira_comment('An error occurred while trying to authenticate on JuneOS.\n'
+                                            f'Error code: *{juneos_auth[0]}* \n\n'
+                                            f'*{juneos_auth[1]}*',
+                                            jira_key=jira_key)
+                else:
+                    fl.error('An error occurred while creating a JuneOS user.\n'
+                             f'Error code: *{juneos_user[0]}* \n\n'
+                             f'*{juneos_user[1]}*')
+                    f.send_jira_comment('An error occurred while creating a JuneOS user.\n'
+                                        f'Error code: *{juneos_user[0]}* \n\n'
+                                        f'*{juneos_user[1]}*',
+                                        jira_key=jira_key)
+
+            elif jira_new_status not in ["To Do", "Done", "In Progress", "Rejected", "Waiting for dev", "Waiting for reply"]:
+                f.send_jira_comment('*Creating a JuneOS account* is the only available for the maintenance employees.',
+                                    jira_key=jira_key)
+            else:
+                pass
 
         else:
             fl.debug(f"The field \"{detect_change_type}\" was changed to: \"{detect_action}\". \n"

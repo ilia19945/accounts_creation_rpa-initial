@@ -168,10 +168,10 @@ def create_google_user_req(first_name, last_name, suggested_email, organizationa
         file.write(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
         file.close()
     elif response.status_code >= 500:
-        fl.error("an error on the google side occurred while creating a google user:\n" + response.json())
+        fl.error(f"an error on the google side occurred while creating a google user:\n {str(response.json())}" )
         return response.status_code, response.__dict__
     else:
-        fl.error("an error occurred while creating a google user\n" + response.json())
+        fl.error(f"an error occurred while creating a google user\n {str(response.json())}")
     return response.status_code, response.__dict__, password
 
 
