@@ -1,33 +1,11 @@
 import datetime
 import logging
-
-# from elasticapm.contrib.starlette import make_apm_client
-# from elasticapm.handlers.logging import LoggingFilter, Formatter
-
-'''
-    An unsuccessful experiment with ELK. Irrelevant anymore. will keep all code commented for possible future development.
-    Currently everything will be logged just to the python console and to the log_date.log files.
-'''
-
-# apm_config = {
-#     'SERVICE_NAME': 'mainfastapi',
-#     'SERVER_URL': 'http://localhost:8200',
-#     'ENVIRONMENT': 'dev',
-#     'GLOBAL_LABELS': 'platform=MainFastApi, application=AccountCreationAutomation',
-#     'CAPTURE_HEADERS': True,
-#     'CAPTURE_BODY': 'all',
-#     'LOG_LEVEL': 'info',
-#     'LOG_FILE': 'C:\PythonProjects\Fastapi\local_logs\log.txt',
-#     'LOG_FILE_SIZE': '100mb'
-# }
-#
-# apm = make_apm_client(apm_config)
-
+from es_connection import client
 
 logger = logging.getLogger()
 
 formatter = logging.Formatter(fmt='{asctime} - {levelname} - {name} - {module}:{funcName}:{lineno} - {message}', style='{')
-# formatter = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
 # DEBUG 10
 # INFO 20
 # WARNING 30
@@ -36,7 +14,7 @@ formatter = logging.Formatter(fmt='{asctime} - {levelname} - {name} - {module}:{
 
 # console output
 console_handler = logging.StreamHandler()
-console_handler.setLevel('DEBUG')
+console_handler.setLevel('INFO')
 console_handler.setFormatter(formatter)
 
 # file logging
@@ -48,7 +26,7 @@ file_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
 
-logger.setLevel('DEBUG')
+logger.setLevel('INFO')
 
 # filters are not used for now
 class InfoFilter(logging.Filter):
@@ -77,15 +55,15 @@ class ErrorCriticalFilter(logging.Filter):
 
 
 def info(msg):
-    # apm.capture_message(msg)
+    client.capture_message(str(msg))
     logging.info(msg)
 
 
 def debug(msg):
-    # apm.capture_message(msg)
+    client.capture_message(str(msg))
     logging.debug(msg)
 
 
 def error(msg):
-    # apm.capture_exception(msg)
+    client.capture_message(str(msg))
     logging.error(msg, exc_info=True)

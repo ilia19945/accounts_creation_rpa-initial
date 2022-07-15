@@ -80,7 +80,7 @@ def exchange_auth_code_to_access_refresh_token(code, jira_key):
     response = requests.post(request_row)  # send and receives response
 
     # print(response.headers)  # receives headers in dict
-    fl.debug(response.json())  # receives body in dict
+    fl.info(response.json())  # receives body in dict
     refreshed_token = response.json()
     if refreshed_token.get("error") is None:
         refreshed_token['datetime'] = str(time.time_ns())[0:10]  # append datetime to dict
@@ -138,7 +138,8 @@ def create_google_user_req(first_name, last_name, suggested_email, organizationa
 
     file = open(r'''C:\Users\ilia1\Desktop\June Homes\User Accounts.txt''', 'a', encoding='utf-8')
 
-    fl.debug(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
+    # fl.info(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
+    fl.info(f"{first_name} {last_name}\nUsername: {suggested_email}")
     url = 'https://admin.googleapis.com/admin/directory/v1/users/'
     headers = {
         'Authorization': f'Bearer {get_actual_token("access_token")}'
@@ -205,7 +206,7 @@ def adding_user_to_google_group(gmail_groups_refined, suggested_email):
             # print(assign_google_group.status_code)
         # print(assign_google_group.json())
     # print(final_row)
-    fl.debug(f"(3/3) Assigned google groups:\n"
+    fl.info(f"(3/3) Assigned google groups:\n"
                   f"{final_str}")
     return final_str
 
@@ -278,7 +279,8 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
 
     characters = string.ascii_letters + string.digits + string.punctuation
     password = ''.join(random.choice(characters) for i in range(35))
-    fl.debug(f'suggested_email: {suggested_email} password: {password}')
+    fl.info(f'suggested_email: {suggested_email}')
+    fl.debug(f'password: {password}')
 
     payload = json.dumps({
         "email": suggested_email,
@@ -293,7 +295,7 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
 
     juneos_user = requests.post(url=url, headers=headers, data=payload)
     if juneos_user.status_code < 300:
-        fl.info('User is created')
+        # fl.info('User is created')
         # print(juneos_user.json()['user'])
         return juneos_user.status_code, \
                juneos_user.json()['user'], \
@@ -323,10 +325,10 @@ def get_juneos_groups_from_position_title(
 
 def assign_groups_to_user(user_id, groups, dev_or_prod, csrftoken, sessionid, token):
     if dev_or_prod == 'prod':
-        fl.debug('assign_groups_to_user on prod was requested')
+        fl.info('assign_groups_to_user on prod was requested')
         url = f"https://junehomes.com/api/v2/auth/users/{user_id}/"
     elif dev_or_prod == 'dev':
-        fl.debug('assign_groups_to_user on dev was requested')
+        fl.info('assign_groups_to_user on dev was requested')
         url = f"https://dev.junehomes.net/api/v2/auth/users/{user_id}/"
     else:
         return 500, 'Error, wrong param dev_or_prod!'
@@ -343,7 +345,7 @@ def assign_groups_to_user(user_id, groups, dev_or_prod, csrftoken, sessionid, to
 
     response = requests.request("PATCH", url, headers=headers, data=payload)
 
-    fl.debug(response.json())
+    fl.info(response.json())
     return response.status_code, response.json()
 
 
@@ -448,7 +450,7 @@ def create_amazon_user(suggested_email, first_name, last_name, user_email_analog
                 MaxResults=1,
                 NextToken=response['NextToken']
             )
-            fl.debug(f'Iteration number: {str(i)}')
+            fl.info(f'Iteration number: {str(i)}')
         except KeyError:
             break
 

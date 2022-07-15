@@ -1,5 +1,3 @@
-import time
-
 from funcs import gmail_app_password
 from celery import Celery
 
