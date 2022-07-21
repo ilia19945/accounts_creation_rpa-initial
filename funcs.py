@@ -237,7 +237,7 @@ def adding_jira_cloud_user(suggested_email):
         "emailAddress": suggested_email
     })
     headers = {
-        'Authorization': 'Basic aWx5YS5rb25vdmFsb3ZAanVuZWhvbWVzLmNvbTpyZ05hRGIyZnZkOUxCcktKckZMYzcyMjY=',
+        'Authorization': 'Basic [INSERT USERNAME:APITOKEN BASE64]',
         'Content-Type': 'application/json'
     }
 
@@ -255,7 +255,7 @@ def adding_jira_user_to_group(account_id, group_id):
     headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': 'Basic aWx5YS5rb25vdmFsb3ZAanVuZWhvbWVzLmNvbTpyZ05hRGIyZnZkOUxCcktKckZMYzcyMjY='
+        'Authorization': 'Basic [INSERT USERNAME:APITOKEN BASE64]',
     }
 
     response = requests.request("POST", url, headers=headers, data=payload)
