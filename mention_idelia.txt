@@ -1,0 +1,94 @@
+{
+    "version": 1,
+    "type": "doc",
+    "content": [
+        {
+            "type": "paragraph",
+            "content": [
+                {
+                    "type": "mention",
+                    "attrs": {
+                        "id": "5def73687dc0360ecd02209c",
+                        "text": "@Idelia Ayzyatulova",
+                        "accessLevel": ""
+                    }
+                },
+                {
+                    "type": "text",
+                    "text": " can you please add "
+                },
+                {
+                    "type": "text",
+                    "text": "suggested_email",
+                    "marks": [
+                        {
+                            "type": "link",
+                            "attrs": {
+                                "href": "mailto:suggested_email"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "text",
+                    "text": " to:"
+                }
+            ]
+        },
+        {
+            "type": "orderedList",
+            "content": [
+                {
+                    "type": "listItem",
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": "CI/CD",
+                                    "marks": [
+                                        {
+                                            "type": "link",
+                                            "attrs": {
+                                                "href": "https://ci.junehomes.net/role-strategy/assign-roles"
+                                            }
+                                        },
+                                        {
+                                            "type": "strong"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "listItem",
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": "Gitlab",
+                                    "marks": [
+                                        {
+                                            "type": "link",
+                                            "attrs": {
+                                                "href": "https://gitlab.com/junehomes"
+                                            }
+                                        },
+                                        {
+                                            "type": "strong"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

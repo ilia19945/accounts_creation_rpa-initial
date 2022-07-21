@@ -1,5 +1,6 @@
 # import logging
 # import sys
+import json
 
 import requests
 import re
@@ -50,6 +51,62 @@ if __name__ == 'mainfastapi':
 
     fl.info('Fast API server has successfully started.')
 
+
+    # # thanks atlassian for the "perfect" solution for mentions 🤦‍
+    # suggested_email = 'Test@test.com'
+    # f.send_jira_comment(message={
+    #     "version": 1,
+    #     "type": "doc",
+    #     "content": [{
+    #         "type": "paragraph",
+    #         "content": [{
+    #             "type": "mention",
+    #             "attrs": {
+    #                 "id": "60cb1687c90cb20068f6bd9e",
+    #                 "text": "@Ilya Konovalov",
+    #                 "accessLevel": ""
+    #             }},
+    #             {
+    #                 "type": "text",
+    #                 "text": " can you please add "},
+    #             {
+    #                 "type": "text",
+    #                 "text": suggested_email,
+    #                 "marks": [
+    #                     {
+    #                         "type": "link",
+    #                         "attrs": {
+    #                             "href": f"mailto:{suggested_email}"
+    #                         }}]},
+    #             {
+    #                 "type": "text",
+    #                 "text": " to:"
+    #             }]},
+    #         {
+    #             "type": "orderedList",
+    #             "content": [{
+    #                 "type": "listItem",
+    #                 "content": [{
+    #                     "type": "paragraph",
+    #                     "content": [{
+    #                         "type": "text",
+    #                         "text": "CI/CD",
+    #                         "marks": [{
+    #                             "type": "link",
+    #                             "attrs": {"href": "https://ci.junehomes.net/role-strategy/assign-roles"}},
+    #                             {"type": "strong"}]}]}]},
+    #                 {
+    #                     "type": "listItem",
+    #                     "content": [{
+    #                         "type": "paragraph",
+    #                         "content": [{
+    #                             "type": "text",
+    #                             "text": "Gitlab",
+    #                             "marks": [{
+    #                                 "type": "link",
+    #                                 "attrs": {"href": "https://gitlab.com/junehomes"}},
+    #                                 {"type": "strong"}]}]}]}]}]},
+    #     jira_key='AUS2-25')
 
     @app.get("/"
              # , name="Don't touch!! :P",
@@ -186,8 +243,8 @@ if __name__ == 'mainfastapi':
                     fl.info(expires_in)
                     token_datetime = f.get_actual_token('datetime')
                     fl.info(token_datetime)
-                except Exception as e:
-                    return fl.error(e)
+                except Exception as error:
+                    return fl.error(error)
                 fl.info(msg=f"Access_token: {access_token}\n"
                             f"datetime: {expires_in}"
                             f"first_name: {first_name}"
@@ -310,9 +367,67 @@ if __name__ == 'mainfastapi':
 
                             f.send_jira_comment(f"(3/3) Assigned google groups:\n"
                                                 f"{final_row}", jira_key)
-
                             # creating email template for sending later from gmail interface
                             # email templates are in \email_templates folder. need to update them there.
+
+                            if organizational_unit == 'Technology':
+
+                                # Ping Idelia to add the new IT emp to Gitlab and CI/CD
+                                message = open("C:\PythonProjects\Fastapi\mention_idelia.txt", "r", encoding="UTF-8").read()
+                                f.send_jira_comment(message=json.loads(message.replace('suggested_email', suggested_email)),
+                                                    jira_key=jira_key)
+
+                                # adding IT emp to calendar
+                                calendar_id = 'junehomes.com_6f1l2kssibhmsg10e7fvnmdv1o@group.calendar.google.com'
+                                adding_to_calendar_result = f.adding_to_junehomes_dev_calendar(suggested_email=suggested_email,
+                                                                                               calendar_id=calendar_id)
+
+                                if adding_to_calendar_result[0] < 300:  # user created successfully
+                                    fl.info(f"User *{suggested_email}* is added to *[junehomes-dev calendar|]*.")
+                                    f.send_jira_comment(f"User *{suggested_email}* is added to *[junehomes-dev "
+                                                        f"calendar|https://calendar.google.com/calendar/u/0/r/settings/calendar"
+                                                        f"/anVuZWhvbWVzLmNvbV82ZjFsMmtzc2liaG1zZzEwZTdmdm5tZHYxb0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t"
+                                                        f"?pli=1]*.", jira_key)
+
+                                else:
+                                    f.send_jira_comment(
+                                        f"An error occured while trying to add a User: *{suggested_email}* to *[junehomes-dev calendar|]*.\n"
+                                        f"Error code: *{adding_to_calendar_result[0]}*\n"
+                                        f"Error body: {adding_to_calendar_result[1]}")
+                                    fl.info(f"An error occured while trying to add a User: *{suggested_email}* to *[junehomes-dev calendar|]*.\n"
+                                            f"Error code: *{adding_to_calendar_result[0]}*\n"
+                                            f"Error body: {adding_to_calendar_result[1]}")
+
+                                adding_user_to_jira = f.adding_jira_cloud_user(suggested_email=suggested_email)
+
+                                if adding_user_to_jira[0] < 300:
+                                    fl.info(f"Jira user *{suggested_email}* is created.")
+                                    f.send_jira_comment(f"Jira user *{suggested_email}* is created.", jira_key)
+
+                                    # jira_account_id =adding_user_to_jira[1]['accountId']
+
+                                    # when user is created - necessary groups are assigned automatically.
+                                    # "name": "confluence-users","groupId": "8f022c21-2ba6-4242-ada9-45c7bf922ff9",
+
+                                    # "name": "jira-software-users","groupId": "30e206a9-d09a-418f-90f5-5144c3ece85a",
+                                     # try:
+                                    #     group_confluence_users = f.adding_jira_user_to_group(account_id=jira_account_id,
+                                    #                                                             group_id="8f022c21-2ba6-4242-ada9-45c7bf922ff9")
+                                    #     group_jira_software_users = f.adding_jira_user_to_group(account_id=jira_account_id,
+                                    #                                                             group_id="30e206a9-d09a-418f-90f5-5144c3ece85a")
+                                    # except Exception as error:
+                                    #     fl.info(f"An error occurred while trying to add to add Jira user *{suggested_email}* to a group.\n"
+                                    #             f"Error: {error}")
+                                    #     f.send_jira_comment(f"An error occurred while creating Jira user *{suggested_email}*  to a group.\n"
+                                    #                         f"Error: {error}", jira_key)
+
+                                else:
+                                    fl.info(f"An error occurred while creating Jira user *{suggested_email}*.\n"
+                                            f"Error code: {adding_user_to_jira[0]} \n"
+                                            f"Error body: {adding_user_to_jira[1]}")
+                                    f.send_jira_comment(f"An error occurred while creating Jira user *{suggested_email}*.\n"
+                                                        f"Error code: {adding_user_to_jira[0]} \n"
+                                                        f"Error body: {adding_user_to_jira[1]}", jira_key)
 
                             # create a template for email
                             with open("C:\PythonProjects\Fastapi\email_templates\google_mail.txt", "r") as data:
@@ -346,13 +461,6 @@ if __name__ == 'mainfastapi':
                                     final_draft = data.read()
 
                                 # sends IT services and policies for member success
-
-                                # send_gmail_message(to=f"{suggested_email}",
-                                #                      sender='ilya.konovalov@junehomes.com',
-                                #                      cc='',
-                                #                      subject='IT services and policies',
-                                #                      message_text=final_draft)
-
                                 send_gmail_message.apply_async(
                                     ('ilya.konovalov@junehomes.com',
                                      [suggested_email],
@@ -370,11 +478,11 @@ if __name__ == 'mainfastapi':
                                     final_draft = data.read()
 
                                 # sends it_services_and_policies_wo_trello_zendesk email to gmail
-                                # send_gmail_message(to=f"{suggested_email}",
-                                #                      sender='ilya.konovalov@junehomes.com',
-                                #                      cc='',
-                                #                      subject='IT services and policies',
-                                #                      message_text=final_draft)
+                                send_gmail_message(to=f"{suggested_email}",
+                                                     sender='ilya.konovalov@junehomes.com',
+                                                     cc='',
+                                                     subject='IT services and policies',
+                                                     message_text=final_draft)
 
                                 send_gmail_message.apply_async(
                                     ('ilya.konovalov@junehomes.com',

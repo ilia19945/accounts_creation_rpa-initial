@@ -56,7 +56,8 @@ def get_new_access_token():
                                    '+https://mail.google.com/' \
                                    '+https://www.googleapis.com/auth/gmail.modify' \
                                    '+https://www.googleapis.com/auth/gmail.compose' \
-                                   '+https://www.googleapis.com/auth/gmail.send&' \
+                                   '+https://www.googleapis.com/auth/gmail.send' \
+                                   '+https://www.googleapis.com/auth/calendar&' \
                                    'access_type=offline&' \
                                    'include_granted_scopes=true&' \
                                    'response_type=code&' \
@@ -93,7 +94,7 @@ def exchange_auth_code_to_access_refresh_token(code, jira_key):
         file.write(str(refreshed_token) + '\n')
         file.close()
         fl.info('Step 5 executed successfully! Auth code has been exchanged to an access token.\n'
-              'Please repeat creating a user account attempt.')
+                'Please repeat creating a user account attempt.')
         send_jira_comment('Current Auth token was irrelevant and has been exchanged to a new token.\n'
                           'Please repeat creating a user account attempt.\n'
                           '(Switch the ticket status -> *"In Progress"* -> *"Create a Google account!"*)',
@@ -169,7 +170,7 @@ def create_google_user_req(first_name, last_name, suggested_email, organizationa
         file.write(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
         file.close()
     elif response.status_code >= 500:
-        fl.error(f"an error on the google side occurred while creating a google user:\n {str(response.json())}" )
+        fl.error(f"an error on the google side occurred while creating a google user:\n {str(response.json())}")
         return response.status_code, response.__dict__
     else:
         fl.error(f"an error occurred while creating a google user\n {str(response.json())}")
@@ -189,7 +190,7 @@ def assign_google_license(google_license_id, suggested_email):
 # https://developers.google.com/admin-sdk/directory/v1/guides/manage-group-members#create_member
 def adding_user_to_google_group(gmail_groups_refined, suggested_email):
     payload = json.dumps({
-        "email": f"{suggested_email}",
+        "email": suggested_email,
         "role": "MEMBER"})
     headers = {'Authorization': f'Bearer {get_actual_token("access_token")}',
                'Content-Type': 'application/json'}
@@ -207,18 +208,73 @@ def adding_user_to_google_group(gmail_groups_refined, suggested_email):
         # print(assign_google_group.json())
     # print(final_row)
     fl.info(f"(3/3) Assigned google groups:\n"
-                  f"{final_str}")
+            f"{final_str}")
     return final_str
 
 
+def adding_to_junehomes_dev_calendar(suggested_email, calendar_id):
+    url = f'https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/acl'
+    payload = json.dumps({
+        "role": "writer",
+        "scope": {
+            "type": "user",
+            "value": suggested_email
+        }
+    })
+    headers = {'Authorization': f'Bearer {get_actual_token("access_token")}',
+               'Accept': 'application/json',
+               'Content-Type': 'application/json'
+               }
+    response = requests.post(url=url, headers=headers, data=payload)
+    return response.status_code, response.json()
+
+
+def adding_jira_cloud_user(suggested_email):
+    # https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-users/#api-rest-api-3-user-post
+    url = "https://junehomes.atlassian.net/rest/api/3/user"
+
+    payload = json.dumps({
+        "emailAddress": suggested_email
+    })
+    headers = {
+        'Authorization': 'Basic aWx5YS5rb25vdmFsb3ZAanVuZWhvbWVzLmNvbTpyZ05hRGIyZnZkOUxCcktKckZMYzcyMjY=',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+
+    return response.status_code, response.json()
+
+def adding_jira_user_to_group(account_id, group_id):
+    # https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-groups/#api-rest-api-3-group-user-post
+    url = f"https://junehomes.atlassian.net/rest/api/3/group/user?groupId={group_id}"
+
+    payload = json.dumps({
+        "accountId": account_id
+    })
+    headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic aWx5YS5rb25vdmFsb3ZAanVuZWhvbWVzLmNvbTpyZ05hRGIyZnZkOUxCcktKckZMYzcyMjY='
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    return response.status_code, response.json()
+
+
 def send_jira_comment(message, jira_key):
-    url = f'https://junehomes.atlassian.net/rest/api/2/issue/{jira_key}/comment'
     headers = {
         'Authorization': jira_api,
         'Content-Type': 'application/json'
     }
-    data = json.dumps(
-        {"body": f"{message}"})
+    if type(message) == dict:
+        url = f'https://junehomes.atlassian.net/rest/api/3/issue/{jira_key}/comment'
+        data = json.dumps(
+            {"body": message})
+    else:
+        url = f'https://junehomes.atlassian.net/rest/api/2/issue/{jira_key}/comment'
+        data = json.dumps(
+            {"body": f"{message}"})
     jira_notification = requests.post(url=url, headers=headers, data=data)
 
     return jira_notification.status_code, jira_notification.json()
@@ -259,7 +315,7 @@ def juneOS_devprod_authorization(dev_or_prod):
                response.json()['token']
     except:
         fl.error(f'Status code:{response.status_code}\n'
-                      f'{response.json()}')
+                 f'{response.json()}')
         return response.status_code, response.text
 
 
@@ -308,7 +364,7 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
 
 def get_juneos_groups_from_position_title(
         # position_title,
-                                          file_name,
+        file_name,
         # jira_key
 ):
     with open('C:\PythonProjects\Fastapi\permissions_by_orgunits\\' + file_name, "r") as data:
@@ -510,6 +566,7 @@ def create_amazon_user(suggested_email, first_name, last_name, user_email_analog
             # print(f"'{user_list[i]['Username']}' - {user_email_analogy}")
             fl.info(f"'{user_list[i]['Username']}' - {user_email_analogy}")
             pass
+
 
 # мб эту раскомментить
 # def create_amazon_user(suggested_email, first_name, last_name, user_email_analogy):
