@@ -25,6 +25,9 @@ gmail_app_password = os.environ.get('GMAIL_APP_PASSWORD')
 juneos_dev_password = os.environ.get('JUNEOS_DEV_PASSWORD')
 juneos_prod_login = os.environ.get('JUNEOS_PROD_LOGIN')
 juneos_prod_password = os.environ.get('JUNEOS_PROD_PASSWORD')
+elk_prod = os.environ.get('ELK_DEV')
+elk_dev = os.environ.get('ELK_PROD')
+notion_secret = os.environ.get('NOTION_SECRET')
 
 
 def get_app_info(arg):
@@ -237,13 +240,14 @@ def adding_jira_cloud_user(suggested_email):
         "emailAddress": suggested_email
     })
     headers = {
-        'Authorization': 'Basic aWx5YS5rb25vdmFsb3ZAanVuZWhvbWVzLmNvbTpyZ05hRGIyZnZkOUxCcktKckZMYzcyMjY=',
+        'Authorization': jira_api,
         'Content-Type': 'application/json'
     }
 
     response = requests.request("POST", url, headers=headers, data=payload)
 
     return response.status_code, response.json()
+
 
 def adding_jira_user_to_group(account_id, group_id):
     # https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-groups/#api-rest-api-3-group-user-post
@@ -255,7 +259,7 @@ def adding_jira_user_to_group(account_id, group_id):
     headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': 'Basic aWx5YS5rb25vdmFsb3ZAanVuZWhvbWVzLmNvbTpyZ05hRGIyZnZkOUxCcktKckZMYzcyMjY='
+        'Authorization': jira_api,
     }
 
     response = requests.request("POST", url, headers=headers, data=payload)
@@ -280,7 +284,7 @@ def send_jira_comment(message, jira_key):
     return jira_notification.status_code, jira_notification.json()
 
 
-def juneOS_devprod_authorization(dev_or_prod):
+def juneos_devprod_authorization(dev_or_prod):
     if dev_or_prod == 'dev':
         # print('dev was requested')
         url = "https://dev.junehomes.net/api/v2/auth/login-web-token/"
@@ -316,7 +320,7 @@ def juneOS_devprod_authorization(dev_or_prod):
     except:
         fl.error(f'Status code:{response.status_code}\n'
                  f'{response.json()}')
-        return response.status_code, response.text
+        return response
 
 
 def create_juneos_user(first_name, last_name, suggested_email, personal_phone, dev_or_prod):
@@ -435,8 +439,8 @@ def send_gmail_message(sender, to, cc, subject, message_text):
         return response.json()['error']
 
 
-# test:
-# print(send_gmail_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com',cc='', subject='subject', message_text='test message'))
+# test: print(send_gmail_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com',cc='', subject='subject',
+# message_text='test message'))
 
 
 # creates a draft on gmail so the message can be easily sent to enduser.
@@ -470,8 +474,8 @@ def create_draft_message(sender, to, cc, subject, message_text):
         return response.json()['error']
 
 
-# test:
-# print(create_draft_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com',cc='', subject='subject', message_text='test message'))
+# test: print(create_draft_message(to="ilya.konovalov@junehomes.com", sender='ilya.konovalov@junehomes.com',cc='', subject='subject',
+# message_text='test message'))
 
 # было create_amazon_user_old
 def create_amazon_user(suggested_email, first_name, last_name, user_email_analogy):
@@ -663,7 +667,7 @@ def create_amazon_user(suggested_email, first_name, last_name, user_email_analog
 
 
 def delete_amazon_user(user_email):
-    # search a user and retrieve it's ID:
+    # search a user and retrieve its ID:
     # like: user_id = '3d3bf4fd-66d6-440f-89ca-95bd7235ce4d'
     user_id = ''
     client = boto3.client('connect')
@@ -672,6 +676,7 @@ def delete_amazon_user(user_email):
         InstanceId=instance_id,
         UserId=user_id
     )
+    return response
 
 
 def create_frontapp_user(suggested_email, first_name, last_name, frontapp_role):
@@ -709,5 +714,155 @@ def create_frontapp_user(suggested_email, first_name, last_name, frontapp_role):
     response = requests.post(url=url, headers=headers, data=payload)
 
     return response.status_code, response.text
+
+
 # test:
 # frontapp_user = create_frontapp_user('ilya.test@example.com','ilya','test',)
+
+
+def create_elk_user(firstname, lastname, suggested_email, role, dev_or_prod):
+    if dev_or_prod == 'prod':
+        url = f'https://kibana-v7.junehomes.net/_security/user/{suggested_email}'
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': elk_prod
+        }
+
+    elif dev_or_prod == 'test':
+        # test url on Ilya Ko. local kibana
+        url = f"https://127.0.0.1:9200/_security/user/{suggested_email}"
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ZWxhc3RpYzpCRDVmV3Irb05vK3YzZGZIQkxlUw=='
+        }
+
+    elif dev_or_prod == 'dev':
+        url = f'https://kibana-v7.dev.junehomes.net/_security/user/{suggested_email}'
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': elk_dev
+        }
+
+    characters = string.ascii_letters + string.digits + string.punctuation
+    password = ''.join(random.choice(characters) for i in range(32))
+
+    payload = json.dumps({
+        "password": password,
+        "enabled": True,
+        "roles": [role],
+        "full_name": f"{firstname} {lastname}",
+        "email": suggested_email
+    })
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    return response, password
+
+
+# position_title = "Chief People Officer"
+
+
+def notion_search_for_role(position_title, jira_key):
+    url = "https://api.notion.com/v1/databases/09dc1fc3ec314343b7222808b5e5a72d/query"
+
+    payload = json.dumps({
+        "filter": {
+            "property": "Role/Persona name",
+            "rich_text": {
+                "equals": position_title.replace("\\", "")
+            }
+        }
+    })
+    headers = {
+        'Notion-Version': '2022-02-22',
+        'Authorization': notion_secret,
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+
+    # pprint(response.json(), indent=1)
+
+    if len(response.json()['results']) == 0:  # if there is no role with this name
+        pprint(response.json()['results'], indent=1)
+        # print(f'the value "{position_title}" does not exist in column "Role/Persona name"')
+        send_jira_comment(f'the value "*{position_title}*" does not exist in column "Role/Persona name" ❌', jira_key=jira_key)
+        return False
+
+    elif len(response.json()['results']) == 1:
+        print('The role found')
+        permissions_for_persona = response.json()['results'][0]['properties']['Permissions for persona']['relation']
+        # print(len(permissions_for_persona))
+        if len(response.json()['results']) == 0:
+            return permissions_for_persona
+
+        else:
+            # pprint(permissions_for_persona, indent=1)  # list
+            return permissions_for_persona
+
+    elif len(response.json()['results']) > 1:  # if there is more than 1 role for this name
+        pprint(response.json(), indent=1)
+        print(f"There there is more than one result for your search ({len(response.json()['results'])}).\n"
+              f"Roles should be unique! Check Rore table for \"{position_title}\"")
+        send_jira_comment(f"There there is more than one result for your search ({len(response.json()['results'])}).\n"
+                          f"Roles should be unique! Check Rore table for \"{position_title}\" ❌", jira_key=jira_key)
+        return False
+    # permissions_for_persona = response.json()['results'][0]['properties']['Permissions for persona']['relation']
+    # if permissions_for_persona
+    # pprint(permissions_for_persona,indent=1)
+
+    return response
+
+
+def notion_search_for_permission_block_children(block_id):
+    url = f"https://api.notion.com/v1/blocks/{block_id}/children?page_size=100"
+
+    payload = {}
+    headers = {
+        'Notion-Version': '2022-02-22',
+        'Authorization': notion_secret
+    }
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    check_permissions = False
+
+    for i in range(len(response.json()['results'])):
+        if 'toggle' in response.json()['results'][i]:
+            if 'code' in response.json()['results'][i]:
+                print('code block found on the page!')
+                permissions = response.json()['results'][i]['code']['rich_text'][0]['text']['content']
+                try:
+                    print('validating JSON ... ')
+                    permissions_json = json.loads(permissions)
+                    pprint(permissions_json, indent=1)
+                    check_permissions = True
+                    print('validated')
+
+                except Exception as e:
+                    # print(f"failed. JSON Error: {e}")
+                    return f"validation failed. JSON Error: {e} ⚠️"
+            else:
+                return "Add code block to the permissions page ⚠️ "
+
+        else:
+            return "Toggle is not added to permissions page ⚠️"
+
+    if check_permissions:
+        return permissions_json, True
+    else:
+        # print('Please add JSON block to the document to the root level on the body page')
+        return 'Please add "/toggle" block containing the valid JSON block to the body page ⚠️'
+
+
+def get_notion_page_title(page_id):
+    url = f"https://api.notion.com/v1/pages/{page_id}"
+
+    payload = {}
+    headers = {
+        'Notion-Version': '2022-02-22',
+        'Authorization': notion_secret
+    }
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+    # pprint(response.json(),indent=1)
+    return response

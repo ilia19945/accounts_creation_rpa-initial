@@ -14,7 +14,8 @@ from tasks import send_gmail_message
 
 from fastapi import Body, FastAPI, HTTPException, Query  # BackgroundTasks
 from typing import Optional
-from elasticapm.contrib.starlette import ElasticAPM
+
+# from elasticapm.contrib.starlette import ElasticAPM
 
 # run server: uvicorn mainfastapi:app --reload --port 80
 # run ngrok: -> ngrok http 80
@@ -51,62 +52,6 @@ if __name__ == 'mainfastapi':
 
     fl.info('Fast API server has successfully started.')
 
-
-    # # thanks atlassian for the "perfect" solution for mentions 🤦‍
-    # suggested_email = 'Test@test.com'
-    # f.send_jira_comment(message={
-    #     "version": 1,
-    #     "type": "doc",
-    #     "content": [{
-    #         "type": "paragraph",
-    #         "content": [{
-    #             "type": "mention",
-    #             "attrs": {
-    #                 "id": "60cb1687c90cb20068f6bd9e",
-    #                 "text": "@Ilya Konovalov",
-    #                 "accessLevel": ""
-    #             }},
-    #             {
-    #                 "type": "text",
-    #                 "text": " can you please add "},
-    #             {
-    #                 "type": "text",
-    #                 "text": suggested_email,
-    #                 "marks": [
-    #                     {
-    #                         "type": "link",
-    #                         "attrs": {
-    #                             "href": f"mailto:{suggested_email}"
-    #                         }}]},
-    #             {
-    #                 "type": "text",
-    #                 "text": " to:"
-    #             }]},
-    #         {
-    #             "type": "orderedList",
-    #             "content": [{
-    #                 "type": "listItem",
-    #                 "content": [{
-    #                     "type": "paragraph",
-    #                     "content": [{
-    #                         "type": "text",
-    #                         "text": "CI/CD",
-    #                         "marks": [{
-    #                             "type": "link",
-    #                             "attrs": {"href": "https://ci.junehomes.net/role-strategy/assign-roles"}},
-    #                             {"type": "strong"}]}]}]},
-    #                 {
-    #                     "type": "listItem",
-    #                     "content": [{
-    #                         "type": "paragraph",
-    #                         "content": [{
-    #                             "type": "text",
-    #                             "text": "Gitlab",
-    #                             "marks": [{
-    #                                 "type": "link",
-    #                                 "attrs": {"href": "https://gitlab.com/junehomes"}},
-    #                                 {"type": "strong"}]}]}]}]}]},
-    #     jira_key='AUS2-25')
 
     @app.get("/"
              # , name="Don't touch!! :P",
@@ -146,12 +91,10 @@ if __name__ == 'mainfastapi':
             return 'Why are you on this page?=.='
 
 
-    # webhook from jira
+    # Jira webhook, tag "employee/contractor hiring"
     @app.post("/webhook", status_code=200)
-    async def main_flow(
-            body: dict = Body(...)
-    ):
-        global jira_key
+    async def main_flow(body: dict = Body(...)):
+
         jira_key = body['issue']['key']
 
         detect_change_type = body['changelog']['items'][0]['field']
@@ -230,6 +173,34 @@ if __name__ == 'mainfastapi':
             # assigns a license depending on the orgunit
             # + creates a main google email + sends it policies + adds them as celery tasks.
             # + creates juneosDEV user if org_unit = IT and sends email as celery task
+
+            """Checking for filling out RoR table"""
+            permissions_for_persona_list = f.notion_search_for_role(position_title, jira_key=jira_key)  # the list of page_ids
+
+            if not permissions_for_persona_list:
+                print(f'Permissions are not added for {position_title}!')
+                f.send_jira_comment(f'Permissions are not added for *{position_title}* position ❌', jira_key=jira_key)
+                return
+
+            pages_list = ''
+
+            for i in range(len(permissions_for_persona_list)):
+                print(f"Reviewing {i + 1} / {len(permissions_for_persona_list)} permissions...")
+                try:
+                    result = f.notion_search_for_permission_block_children(permissions_for_persona_list[i]['id'])
+                    if type(result) == tuple:
+                        # print(True)
+                        pages_list += f"[{f.get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']}|" \
+                                      f"{f.get_notion_page_title(permissions_for_persona_list[i]['id']).json()['url']}]: Everything is okay here, " \
+                                      f"Good Job! ✅ \n "
+                    else:
+                        pages_list += f"[{f.get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']}|" \
+                                      f"{f.get_notion_page_title(permissions_for_persona_list[i]['id']).json()['url']}]: *{result}*\n"
+                except Exception as e:
+                    print(e)
+            print(pages_list)
+            f.send_jira_comment(message=f"The summary after reviewing permissions for {position_title} persona:\n{pages_list}", jira_key=jira_key)
+
             if jira_old_status == "In Progress" and jira_new_status == "Create a google account":
                 fl.info(f"Key: {jira_key}")
                 fl.info(f"Correct event to create user Google account detected. Perform user creation attempt ...")
@@ -385,15 +356,15 @@ if __name__ == 'mainfastapi':
                                 if adding_to_calendar_result[0] < 300:  # user created successfully
                                     fl.info(f"User *{suggested_email}* is added to *[junehomes-dev calendar|]*.")
                                     f.send_jira_comment(f"User *{suggested_email}* is added to *[junehomes-dev "
-                                                        f"calendar|https://calendar.google.com/calendar/u/0/r/settings/calendar"
-                                                        f"/anVuZWhvbWVzLmNvbV82ZjFsMmtzc2liaG1zZzEwZTdmdm5tZHYxb0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t"
-                                                        f"?pli=1]*.", jira_key)
+                                                        f"calendar|https://calendar.google.com/calendar/u/0/r/settings/calendar/anVuZWhvbWVzLmNvbV82ZjFsMmtzc2liaG1zZzEwZTdmdm5tZHYxb0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t?pli=1]*.",
+                                                        jira_key)
 
                                 else:
                                     f.send_jira_comment(
                                         f"An error occured while trying to add a User: *{suggested_email}* to *[junehomes-dev calendar|]*.\n"
                                         f"Error code: *{adding_to_calendar_result[0]}*\n"
-                                        f"Error body: {adding_to_calendar_result[1]}")
+                                        f"Error body: {adding_to_calendar_result[1]}",
+                                        jira_key=jira_key)
                                     fl.info(f"An error occured while trying to add a User: *{suggested_email}* to *[junehomes-dev calendar|]*.\n"
                                             f"Error code: *{adding_to_calendar_result[0]}*\n"
                                             f"Error body: {adding_to_calendar_result[1]}")
@@ -410,7 +381,7 @@ if __name__ == 'mainfastapi':
                                     # "name": "confluence-users","groupId": "8f022c21-2ba6-4242-ada9-45c7bf922ff9",
 
                                     # "name": "jira-software-users","groupId": "30e206a9-d09a-418f-90f5-5144c3ece85a",
-                                     # try:
+                                    # try:
                                     #     group_confluence_users = f.adding_jira_user_to_group(account_id=jira_account_id,
                                     #                                                             group_id="8f022c21-2ba6-4242-ada9-45c7bf922ff9")
                                     #     group_jira_software_users = f.adding_jira_user_to_group(account_id=jira_account_id,
@@ -429,6 +400,91 @@ if __name__ == 'mainfastapi':
                                                         f"Error code: {adding_user_to_jira[0]} \n"
                                                         f"Error body: {adding_user_to_jira[1]}", jira_key)
 
+                                # creating account on ELK Development
+                                adding_user_to_elk_dev = f.create_elk_user(firstname=first_name,
+                                                                           lastname=last_name,
+                                                                           suggested_email=suggested_email,
+                                                                           role='viewer',
+                                                                           dev_or_prod='dev'
+                                                                           )
+
+                                if adding_user_to_elk_dev[0].status_code < 300:
+
+                                    fl.info(f'ELK Dev user is created. ELK dev credentials will be sent in: '
+                                            f'*{round(unix_countdown_time / 3600)} hours*.')
+                                    f.send_jira_comment(f'ELK Dev user is created. ELK dev credentials will be sent in: '
+                                                        f'*{round(unix_countdown_time / 3600)} hours*.', jira_key)
+
+                                    with open("C:\PythonProjects\Fastapi\email_templates\kibana_development.txt", "r") as data:
+                                        email_template = data.read()
+                                        username = email_template.replace('{username}', f'<b>{first_name}</b>')
+                                        final_draft = username.replace('{STRINGTOREPLACE}',
+                                                                       f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
+                                                                       f'<p style="font-family:verdana">- password:  '
+                                                                       f'<b>{adding_user_to_elk_dev[1]}</b></p>')
+                                        fl.debug(final_draft)
+
+                                    send_gmail_message.apply_async(
+                                        ('ilya.konovalov@junehomes.com',
+                                         [personal_email],
+                                         ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', supervisor_email],
+                                         'Kibana.Development credentials.',
+                                         final_draft,
+                                         round(unix_countdown_time / 3600)),
+                                        queue='new_emps',
+                                        countdown=round(unix_countdown_time))
+
+                                else:
+                                    fl.info(f'ELK Dev user is NOT created!\n'
+                                            f'Response:{adding_user_to_elk_dev[0].status_code}\n'
+                                            f'{adding_user_to_elk_dev[0].json()}')
+
+                                    f.send_jira_comment(f'ELK Dev user is *NOT created*!\n'
+                                                        f'Response:{adding_user_to_elk_dev[0].status_code}\n'
+                                                        f'{adding_user_to_elk_dev[0].json()}', jira_key)
+
+                                adding_user_to_elk_prod = f.create_elk_user(firstname=first_name,
+                                                                            lastname=last_name,
+                                                                            suggested_email=suggested_email,
+                                                                            role='viewer',
+                                                                            dev_or_prod='prod'
+                                                                            )
+
+                                if adding_user_to_elk_prod[0].status_code < 300:
+
+                                    with open("C:\PythonProjects\Fastapi\email_templates\kibana_production.txt", "r") as data:
+                                        email_template = data.read()
+                                        username = email_template.replace('{username}', f'<b>{first_name}</b>')
+                                        final_draft = username.replace('{STRINGTOREPLACE}',
+                                                                       f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
+                                                                       f'<p style="font-family:verdana">- password:  '
+                                                                       f'<b>{adding_user_to_elk_prod[1]}</b></p>')
+                                        fl.debug(final_draft)
+
+                                    send_gmail_message.apply_async(
+                                        ('ilya.konovalov@junehomes.com',
+                                         [personal_email],
+                                         ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', supervisor_email],
+                                         'Kibana.Production credentials.',
+                                         final_draft,
+                                         round(unix_countdown_time / 3600)),
+                                        queue='new_emps',
+                                        countdown=round(unix_countdown_time))
+
+                                    fl.info(f'ELK Prod user is created. ELK Prod credentials will be sent in: '
+                                            f'*{round((unix_countdown_time / 3600), 2)} hours*.')
+                                    f.send_jira_comment(f'ELK Prod user is created. ELK Prod credentials will be sent in: '
+                                                        f'*{round((unix_countdown_time / 3600), 2)} hours*.', jira_key)
+                                else:
+
+                                    fl.info(f'ELK Prod user is NOT created! '
+                                            f'Response: {adding_user_to_elk_prod[0].status_code} '
+                                            f'{adding_user_to_elk_prod[0].json()}')
+
+                                    f.send_jira_comment(f'ELK Prod user is NOT created!\n'
+                                                        f'Response:{adding_user_to_elk_prod[0].status_code}\n'
+                                                        f'{adding_user_to_elk_prod[0].json()}', jira_key)
+
                             # create a template for email
                             with open("C:\PythonProjects\Fastapi\email_templates\google_mail.txt", "r") as data:
                                 email_template = data.read()
@@ -436,7 +492,6 @@ if __name__ == 'mainfastapi':
                                 final_draft = username.replace('{STRINGTOREPLACE}',
                                                                f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
                                                                f'<p style="font-family:verdana">- password:  <b>{f.password}</b></p>')
-                                fl.info(final_draft)
 
                             send_gmail_message.apply_async(
                                 ('ilya.konovalov@junehomes.com',
@@ -479,10 +534,10 @@ if __name__ == 'mainfastapi':
 
                                 # sends it_services_and_policies_wo_trello_zendesk email to gmail
                                 send_gmail_message(to=f"{suggested_email}",
-                                                     sender='ilya.konovalov@junehomes.com',
-                                                     cc='',
-                                                     subject='IT services and policies',
-                                                     message_text=final_draft)
+                                                   sender='ilya.konovalov@junehomes.com',
+                                                   cc='',
+                                                   subject='IT services and policies',
+                                                   message_text=final_draft)
 
                                 send_gmail_message.apply_async(
                                     ('ilya.konovalov@junehomes.com',
@@ -589,9 +644,10 @@ if __name__ == 'mainfastapi':
 
                             fl.info(f'message was sent to celery. {round(unix_countdown_time / 3600)}')
 
-                        except:
+                        except Exception as e:
 
-                            fl.error(amazon_result)
+                            fl.info(amazon_result)
+                            fl.info(e)
 
                             f.send_jira_comment('Error message:\n'
                                                 f'*{amazon_result}*.',
@@ -605,16 +661,17 @@ if __name__ == 'mainfastapi':
                     '''Группы добавлять вручную в json файле'''
                     '''Для Technology всегда ставится галка супер юзер вручную'''
 
-                    try:
-                        groups = f.get_juneos_groups_from_position_title(file_name='groups_technology.json')[position_title]
-                    except Exception as error:
-                        fl.error(error)
-                        f.send_jira_comment(f'An error occurred while trying to search a user position:\n'
-                                            f'*{error}* for *{organizational_unit}*.\n'
-                                            f'Check if position exists in /permissions_by_orgunits/*groups_technology.json*'
-                                            f' in and update json. Then try again.',
-                                            jira_key=jira_key)
-                        return KeyError(error)
+                    # не актуально пока не будет добавлена проверка роли
+                    # try:
+                    #     groups = f.get_juneos_groups_from_position_title(file_name='groups_technology.json')[position_title]
+                    # except Exception as error:
+                    #     fl.info(error)
+                    #     f.send_jira_comment(f'An error occurred while trying to search a user position:\n'
+                    #                         f'*{error}* for *{organizational_unit}*.\n'
+                    #                         f'Check if position exists in /permissions_by_orgunits/*groups_technology.json*'
+                    #                         f' in and update json. Then try again.',
+                    #                         jira_key=jira_key)
+                    #     return KeyError(error)
 
                     juneos_user = f.create_juneos_user(first_name=first_name,
                                                        last_name=last_name,
@@ -714,11 +771,12 @@ if __name__ == 'mainfastapi':
                                             f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
                                             jira_key=jira_key)
                         try:
-                            juneos_auth = f.juneOS_devprod_authorization(dev_or_prod='prod')
+
+                            juneos_auth = f.juneos_devprod_authorization(dev_or_prod='prod')
                         except Exception as error:
                             fl.error(error)
 
-                        if juneos_auth[0] < 300:
+                        if juneos_auth.status_code < 300:
                             statuscode = juneos_auth[0]
                             csrftoken = juneos_auth[1]
                             sessionid = juneos_auth[2]
@@ -759,8 +817,8 @@ if __name__ == 'mainfastapi':
 
                         else:
                             fl.error('An error occurred while trying to authenticate on JuneOS.\n'
-                                     f'Error code: *{juneos_auth[0]}* \n\n'
-                                     f'*{juneos_auth[1]}*')
+                                     f'Error code: *{juneos_auth.status_code}* \n\n'
+                                     f'*{juneos_auth.text}*')
                             f.send_jira_comment('An error occurred while trying to authenticate on JuneOS.\n'
                                                 f'Error code: *{juneos_auth[0]}* \n\n'
                                                 f'*{juneos_auth[1]}*',
@@ -827,7 +885,7 @@ if __name__ == 'mainfastapi':
                                             f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
                                             jira_key=jira_key)
 
-                        juneos_auth = f.juneOS_devprod_authorization(dev_or_prod='prod')
+                        juneos_auth = f.juneos_devprod_authorization(dev_or_prod='prod')
                         if juneos_auth[0] < 300:
                             statuscode = juneos_auth[0]
                             csrftoken = juneos_auth[1]
@@ -927,7 +985,7 @@ if __name__ == 'mainfastapi':
                                             f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
                                             jira_key=jira_key)
 
-                        juneos_auth = f.juneOS_devprod_authorization(dev_or_prod='prod')
+                        juneos_auth = f.juneos_devprod_authorization(dev_or_prod='prod')
                         if juneos_auth[0] < 300:
                             statuscode = juneos_auth[0]
                             csrftoken = juneos_auth[1]
@@ -1009,10 +1067,10 @@ if __name__ == 'mainfastapi':
             pass
 
 
+    # Jira webhook, tag "maintenance employee hiring"
     @app.post("/maintenance_hiring", status_code=200)
-    async def main_flow(
-            body: dict = Body(...)
-    ):
+    async def main_flow(body: dict = Body(...)):
+
         jira_key = body['issue']['key']
 
         detect_change_type = body['changelog']['items'][0]['field']
@@ -1138,7 +1196,7 @@ if __name__ == 'mainfastapi':
                                         f"*[LINK|https://junehomes.com/december_access/staff/{link}]*",
                                         jira_key=jira_key)
                     try:
-                        juneos_auth = f.juneOS_devprod_authorization(dev_or_prod='prod')
+                        juneos_auth = f.juneos_devprod_authorization(dev_or_prod='prod')
                     except Exception as error:
                         fl.error(error)
 
@@ -1170,9 +1228,6 @@ if __name__ == 'mainfastapi':
                             f.send_jira_comment('Groups in JuneOS are assigned to *[user|https://junehomes.com/december_access/'
                                                 f'users/user/{juneos_user_id}/change/]*.\n',
                                                 jira_key=jira_key)
-
-
-
                         else:
 
                             f.send_jira_comment('An error occurred while assigning groups to JuneOS user.\n'
