@@ -313,10 +313,11 @@ def juneos_devprod_authorization(dev_or_prod):
 
     try:
         response = requests.request("POST", url, headers=headers, data=payload)
-        return response.status_code, \
-               response.cookies['csrftoken'], \
-               response.cookies['sessionid'], \
-               response.json()['token']
+        # return response.status_code, \
+        #        response.cookies['csrftoken'], \
+        #        response.cookies['sessionid'], \
+        #        response.json()['token']
+        return response
     except:
         fl.error(f'Status code:{response.status_code}\n'
                  f'{response.json()}')
@@ -354,16 +355,22 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
     })
 
     juneos_user = requests.post(url=url, headers=headers, data=payload)
-    if juneos_user.status_code < 300:
-        # fl.info('User is created')
-        # print(juneos_user.json()['user'])
-        return juneos_user.status_code, \
-               juneos_user.json()['user'], \
-               juneos_user.json()['user']['id']
 
-    else:  # if error
-        fl.info(juneos_user.json()['errors'])
-        return juneos_user.status_code, juneos_user.json()['errors']
+    # if juneos_user.status_code < 300:
+    #     # fl.info('User is created')
+    #     # print(juneos_user.json()['user'])
+    #
+    #     # return juneos_user.status_code, \
+    #     #        juneos_user.json()['user'], \
+    #     #        juneos_user.json()['user']['id']
+    #
+    #     return juneos_user
+    #
+    #
+    # else:  # if error
+    #     fl.info(juneos_user.json()['errors'])
+    #     return juneos_user.status_code, juneos_user.json()['errors']
+    return juneos_user
 
 
 def get_juneos_groups_from_position_title(
@@ -503,7 +510,7 @@ def create_amazon_user(suggested_email, first_name, last_name, user_email_analog
         i += 1
 
         try:
-            a = response['NextToken']
+            print(response['NextToken'])
             user_list += response['UserSummaryList']
             response = client.list_users(
                 InstanceId=instance_id,
@@ -667,6 +674,7 @@ def create_amazon_user(suggested_email, first_name, last_name, user_email_analog
 
 
 def delete_amazon_user(user_email):
+    # user_email - will need to search for the user email
     # search a user and retrieve its ID:
     # like: user_id = '3d3bf4fd-66d6-440f-89ca-95bd7235ce4d'
     user_id = ''
@@ -833,7 +841,7 @@ def notion_search_for_permission_block_children(block_id):
                 permissions = response.json()['results'][i]['code']['rich_text'][0]['text']['content']
                 try:
                     print('validating JSON ... ')
-                    permissions_json = json.loads(permissions)
+                    permissions_json: object = json.loads(permissions)
                     pprint(permissions_json, indent=1)
                     check_permissions = True
                     print('validated')
