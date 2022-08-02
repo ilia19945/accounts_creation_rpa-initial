@@ -1,4 +1,6 @@
-from funcs import gmail_app_password
+import boto3
+
+from funcs import gmail_app_password, send_jira_comment
 from celery import Celery
 
 from email.mime.text import MIMEText
@@ -34,15 +36,138 @@ def send_gmail_message(sender, to, cc, subject, message_text, countdown):
     return f'Message was successfully sent to:{to}, hours to send was: {countdown}'
 
 
-# result = send_gmail_message.apply_async(
-#                                         ('ilya.konovalov@junehomes.com', # from
-#                                          ["ilia19945@mail.ru"], # to
-#                                          ['maria.zhuravleva@junehomes.com', 'ilia19945@gmail.com', supervisor_email], # cc
-#                                          'test message', # subject
-#                                          'final_draft' # email body
-#                                         ),
-#                                       countdown=10)
-#                                                           ^^^ comments should be removed.
+@celery_app.task
+def create_amazon_user(suggested_email,
+                       first_name,
+                       last_name,
+                       user_email_analogy,
+                       password,
+                       final_draft,
+                       unix_countdown_time,
+                       jira_key):
+    client = boto3.client('connect')
+    instance_id = 'a016cbe1-24bf-483a-b2cf-a73f2f389cb4'
+
+    send_jira_comment(f'*Celery* task to create Amazon account for *{suggested_email}* is added.\n'
+                      'Please wait ...', jira_key)
+
+    # receives a list of users
+    response = client.list_users(
+        InstanceId=instance_id,
+        MaxResults=100
+    )
+    # print(len(response['UserSummaryList']))
+    i = 0
+    user_list = []
+
+    # creating a list of users
+    # async with aiohttp.ClientSession() as session:
+    while True:
+        i += 1
+        try:
+            # print(response['NextToken'])
+            user_list += response['UserSummaryList']
+            response = client.list_users(
+                InstanceId=instance_id,
+                MaxResults=1,
+                NextToken=response['NextToken']
+            )
+            fl.info(f'Iteration number: {str(i)}')
+        except KeyError:
+            break
+    # pprint(user_list, indent=1)
+
+    analogy_user_exists = False
+
+    # check if the user is already created
+    for i in range(len(user_list)):
+        if suggested_email in user_list[i]['Username']:
+            send_jira_comment(f'User: *{suggested_email}* is already created!', jira_key=jira_key)
+            fl.info(f'User: *{suggested_email}* is already created!')
+            return
+        else:
+            pass
+
+    # check if the analogy user exists on amazon
+    for i in range(len(user_list)):
+        if user_email_analogy in user_list[i]['Username']:
+            amazon_user_id = user_list[i]['Id']
+            fl.info(amazon_user_id)
+            # receive a user description from amazon
+            response = client.describe_user(
+                UserId=str(amazon_user_id),
+                InstanceId=instance_id
+            )
+
+            analogy_user_exists = True
+
+            # creating a user
+            try:
+                response = client.create_user(
+                    Username=suggested_email,
+                    Password=password,
+                    IdentityInfo={
+                        'FirstName': first_name,
+                        'LastName': last_name,
+                        'Email': suggested_email
+                    },
+                    PhoneConfig={
+                        'PhoneType': response['User']['PhoneConfig']['PhoneType'],
+                        'AutoAccept': response['User']['PhoneConfig']['AutoAccept'],
+                        'AfterContactWorkTimeLimit': 60
+                    },
+                    # DirectoryUserId='string',
+                    SecurityProfileIds=response['User']['SecurityProfileIds'],
+                    RoutingProfileId=response['User']['RoutingProfileId'],
+                    # HierarchyGroupId='string',
+                    InstanceId=instance_id,
+                    Tags={}
+                )
+                fl.info(response)
+                # fl.info(f"Amazon password: {password}")
+                fl.info(f'Amazon account for *{suggested_email}* is created.')
+
+            except Exception as error:  # error while creating a user
+                fl.error(msg=error)
+                send_jira_comment('An error occurred while creating *Amazon account*:\n\n'
+                                  f'*{error}*',
+                                  jira_key=jira_key)
+                return
+
+            else:  # no errors normal flow
+                fl.info('*Amazon account* is created successfully!\n'
+                        f'An email with Amazon account credentials will be sent to {suggested_email}')
+                send_jira_comment('*Amazon account* is created successfully!\n'
+                                  f'An email with Amazon account credentials will be sent to *{suggested_email}* '
+                                  f'in *{round(unix_countdown_time / 3600)}* hours\n',
+                                  jira_key=jira_key)
+                print('the account is created!')
+
+                # normal flow - returns another celery task to send the email
+                return send_gmail_message.apply_async(
+                    ('ilya.konovalov@junehomes.com',
+                     [suggested_email],
+                     ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
+                     'Access to Amazon Connect call center',
+                     final_draft,
+                     round(unix_countdown_time / 3600)),
+                    queue='new_emps',
+                    countdown=round(unix_countdown_time))
+
+        else:
+            print("Iteration: ", i)
+            pass
+
+    if not analogy_user_exists:
+
+        fl.info('Amazon account* is NOT created.\n'
+                f'"{user_email_analogy}" from user example doesn\'t exist!')
+
+        send_jira_comment('*Amazon account* is NOT created.\n'
+                          f'*{user_email_analogy}* from user example doesn\'t exist!\n',
+                          jira_key=jira_key)
+        return
+
 
 # revoke tasks  https://docs.celeryq.dev/en/stable/userguide/workers.html#revoke-revoking-tasks
 #               https://stackoverflow.com/questions/8920643/cancel-an-already-executing-task-with-celery
@@ -65,6 +190,19 @@ def send_gmail_message(sender, to, cc, subject, message_text, countdown):
 #
 #
 # @celery_app.task
-# def multiply(x, y):
-#     time.sleep(10)
-#     return x * y
+# def multiply():
+#     try:
+#         print(f'inside a celery task')
+#         time.sleep(5)
+#     except Exception as e:
+#         return e
+#     else:
+#         return send_gmail_message.apply_async(
+#                             ('ilya.konovalov@junehomes.com',
+#                              ['ilia19945@mail.ru'],
+#                              [],
+#                              'test',
+#                              'finaldraft',
+#                              round(1 / 3600)),
+#                             queue='new_emps',
+#                             countdown=round(1))

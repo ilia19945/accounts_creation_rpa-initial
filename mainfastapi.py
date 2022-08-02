@@ -1,22 +1,18 @@
-# import logging
-# import sys
 import json
+import random
+import string
 
 import requests
 import re
-# import celery
-# import json
 import time
 from datetime import datetime
 import funcs as f
 import fast_api_logging as fl
-from tasks import send_gmail_message
+from tasks import send_gmail_message, create_amazon_user
 
-from fastapi import Body, FastAPI, HTTPException, Query, BackgroundTasks
+from fastapi import Body, FastAPI, HTTPException, Query, BackgroundTasks, status
 from typing import Optional
 from jinja2 import Environment, FileSystemLoader
-
-# from elasticapm.contrib.starlette import ElasticAPM
 
 # run server: uvicorn mainfastapi:app --reload --port 80
 # run ngrok: -> ngrok http 80
@@ -34,11 +30,8 @@ from jinja2 import Environment, FileSystemLoader
 # when finished need to finish the notion article
 # https://www.notion.so/junehomes/Automatic-user-accounts-creation-82fe3380c2f749ef9d1b37a1e22abe7d
 
-
 app = FastAPI()
 
-# https://www.elastic.co/guide/en/apm/agent/python/current/starlette-support.html#starlette-fastapi
-# app.add_middleware(ElasticAPM, client=fl.apm)
 global jira_key
 jira_key = ''
 
@@ -96,7 +89,7 @@ if __name__ == 'mainfastapi':
 
 
     @app.post("/webhook", status_code=200)  # Jira webhook, tag "employee/contractor hiring"
-    async def main_flow(body: dict = Body(...)):
+    async def main_flow(background_tasks: BackgroundTasks, body: dict = Body(...)):
 
         jira_key = body['issue']['key']
 
@@ -313,8 +306,6 @@ if __name__ == 'mainfastapi':
 
                             f.send_jira_comment(f"(3/3) Assigned google groups:\n"
                                                 f"{final_row}", jira_key)
-                            # creating email template for sending later from gmail interface
-                            # email templates are in \email_templates folder. need to update them there.
 
                             if organizational_unit == 'Technology':
 
@@ -398,15 +389,6 @@ if __name__ == 'mainfastapi':
                                                                   password=adding_user_to_elk_dev[1]
                                                                   )
 
-                                    # with open("C:\PythonProjects\Fastapi\email_templates\kibana_development.txt", "r") as data:
-                                    #     email_template = data.read()
-                                    #     username = email_template.replace('{username}', f'<b>{first_name}</b>')
-                                    #     final_draft = username.replace('{STRINGTOREPLACE}',
-                                    #                                    f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
-                                    #                                    f'<p style="font-family:verdana">- password:  '
-                                    #                                    f'<b>{adding_user_to_elk_dev[1]}</b></p>')
-                                    #     fl.debug(final_draft)
-
                                     send_gmail_message.apply_async(
                                         ('ilya.konovalov@junehomes.com',
                                          [personal_email],
@@ -443,15 +425,6 @@ if __name__ == 'mainfastapi':
                                                                   password=adding_user_to_elk_dev[1]
                                                                   )
 
-                                    # with open("C:\PythonProjects\Fastapi\email_templates\kibana_production.txt", "r") as data:
-                                    #     email_template = data.read()
-                                    #     username = email_template.replace('{username}', f'<b>{first_name}</b>')
-                                    #     final_draft = username.replace('{STRINGTOREPLACE}',
-                                    #                                    f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
-                                    #                                    f'<p style="font-family:verdana">- password:  '
-                                    #                                    f'<b>{adding_user_to_elk_prod[1]}</b></p>')
-                                    #     fl.debug(final_draft)
-
                                     send_gmail_message.apply_async(
                                         ('ilya.konovalov@junehomes.com',
                                          [personal_email],
@@ -484,13 +457,6 @@ if __name__ == 'mainfastapi':
                                                           password=f.password
                                                           )
 
-                            # with open("C:\PythonProjects\Fastapi\email_templates\google_mail.txt", "r") as data:
-                            #     email_template = data.read()
-                            #     username = email_template.replace('{username}', f'<b>{first_name}</b>')
-                            #     final_draft = username.replace('{STRINGTOREPLACE}',
-                            #                                    f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
-                            #                                    f'<p style="font-family:verdana">- password:  <b>{f.password}</b></p>')
-
                             send_gmail_message.apply_async(
                                 ('ilya.konovalov@junehomes.com',
                                  [personal_email],
@@ -513,8 +479,6 @@ if __name__ == 'mainfastapi':
 
                                 template = env.get_template('it_services_and_policies_support.txt')
                                 final_draft = template.render()
-                                # with open("C:\PythonProjects\Fastapi\email_templates\it_services_and_policies_support.txt", "r") as data:
-                                #     final_draft = data.read()
 
                                 # sends IT services and policies for member success
                                 send_gmail_message.apply_async(
@@ -526,6 +490,7 @@ if __name__ == 'mainfastapi':
                                      round(unix_countdown_time / 3600)),
                                     queue='new_emps',
                                     countdown=(round(unix_countdown_time) + 300))
+
                                 # calculates the time before sending the email
                                 fl.info(f'June Homes: corporate email account will be sent in {round((unix_countdown_time / 3600), 2)}')
 
@@ -533,9 +498,6 @@ if __name__ == 'mainfastapi':
 
                                 template = env.get_template('it_services_and_policies_wo_trello_zendesk.txt')
                                 final_draft = template.render()
-
-                                # with open("C:\PythonProjects\Fastapi\email_templates\it_services_and_policies_wo_trello_zendesk.txt", "r") as data:
-                                #     final_draft = data.read()
 
                                 # sends it_services_and_policies_wo_trello_zendesk email to gmail
                                 send_gmail_message(to=f"{suggested_email}",
@@ -553,9 +515,9 @@ if __name__ == 'mainfastapi':
                                      round(unix_countdown_time / 3600)),
                                     queue='new_emps',
                                     countdown=(round(unix_countdown_time) + 300))
+
                                 # calculates the time before sending the email
                                 fl.info(f"IT services and policies email will be sent in {round((unix_countdown_time + 300) / 3600, 2)} hours.")
-                                # send event status as comment
                             f.send_jira_comment("Final is reached!\n"
                                                 f"*IT services and policies* email will be sent in *{round((unix_countdown_time + 300) / 3600, 2)}* "
                                                 "hours.",
@@ -568,7 +530,6 @@ if __name__ == 'mainfastapi':
                                                 f"Error code: {google_user[0]}\n"
                                                 f"Error response: {google_user[1]}", jira_key)
 
-            # https://fastapi.tiangolo.com/tutorial/background-tasks/ MUST HAVE OTHERVISE IS TOO LONG TO WAIT
             elif jira_new_status == "Create a FrontApp account":
                 fl.info(f"Frontapp role: {frontapp_role}")
 
@@ -599,7 +560,6 @@ if __name__ == 'mainfastapi':
                     f.send_jira_comment(jira_key=jira_key, message=f'The role specified for a frontapp user: "{frontapp_role}" - *doesn\'t exist!*\n'
                                                                    f'The list of the roles:\n {roles_dict.keys()}')
 
-            # https://fastapi.tiangolo.com/tutorial/background-tasks/ MUST HAVE OTHERVISE IS TOO LONG TO WAIT
             elif jira_new_status == "Create an Amazon account":
                 fl.info(f'Analogy to create the User on Amazon: "{user_email_analogy}"')
                 if user_email_analogy in ('', 'N/A ', ' ', '-'):
@@ -607,68 +567,30 @@ if __name__ == 'mainfastapi':
                                         jira_key=jira_key)
                     fl.error(f'not a user email: "{user_email_analogy}"')
                 else:
-                    amazon_result = f.create_amazon_user(suggested_email=suggested_email,
-                                                         first_name=first_name,
-                                                         last_name=last_name,
-                                                         user_email_analogy=user_email_analogy
-                                                         )
-                    if amazon_result is None:  # if no user was found
-                        fl.error(f'No user with this email: {user_email_analogy}')
-                        f.send_jira_comment(f'No user with this email: *{user_email_analogy}*.\n'
-                                            f'Check the user email and try again.',
-                                            jira_key=jira_key)
+                    characters = string.ascii_letters + string.digits + string.punctuation
+                    password = ''.join(random.choice(characters) for i in range(16))
 
-                    else:
-                        try:
-                            amazon_password = amazon_result[1]
-                            fl.info(f"Amazon password: {amazon_password}")
+                    template = env.get_template(name="amazon_connect_jinja.txt")
+                    final_draft = template.render(first_name=first_name,
+                                                  suggested_email=suggested_email,
+                                                  amazon_password=password
+                                                  )
 
-                            f.send_jira_comment('*Amazon account* is created successfully!\n'
-                                                f'An email with Amazon account credentials will be sent to *{suggested_email}*\n'
-                                                f' In *{round(unix_countdown_time / 3600, 2)}* hours.',
-                                                jira_key=jira_key)
-
-                            fl.info(f'Amazon account for *{suggested_email}* is created.')
-
-                            template = env.get_template(name="amazon_connect_jinja.txt")
-                            final_draft = template.render(first_name=first_name,
-                                                          suggested_email=suggested_email,
-                                                          amazon_password=amazon_password
-                                                          )
-
-                            # with open(r"C:\PythonProjects\Fastapi\email_templates\amazon_connect.txt", "r") as data:
-                            #     email_template = data.read()
-                            #     username = email_template.replace('{username}', f'<b>{first_name}</b>')
-                            #     final_draft = username.replace('{STRINGTOREPLACE}',
-                            #                                    f'<p style="font-family:verdana">- username:  <b>{suggested_email}</b></p>\n\n'
-                            #                                    f'<p style="font-family:verdana">- password:  <b>{amazon_password}</b></p>')
-
-                            # print(final_draft)
-                            send_gmail_message.apply_async(
-                                ('ilya.konovalov@junehomes.com',
-                                 [suggested_email],
-                                 ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
-                                 'Access to Amazon Connect call center',
-                                 final_draft,
-                                 round(unix_countdown_time / 3600)),
-                                queue='new_emps',
-                                countdown=round(unix_countdown_time))
-
-                            fl.info(f'message was sent to celery. {round(unix_countdown_time / 3600)}')
-
-                        except Exception as e:
-
-                            fl.info(amazon_result)
-                            fl.info(e)
-
-                            f.send_jira_comment('Error message:\n'
-                                                f'*{amazon_result}*.',
-                                                jira_key=jira_key)
-                return print('the task will be completed in the background')
-
+                    # celery account creation attempt
+                    create_amazon_user.apply_async(
+                        (suggested_email,
+                         first_name,
+                         last_name,
+                         user_email_analogy,
+                         password,
+                         final_draft,
+                         unix_countdown_time,
+                         jira_key),
+                        queue='other')
+                    return
+                return
 
             elif jira_new_status == 'Create a JuneOS account':
-
                 fl.info(organizational_unit)
 
                 if organizational_unit == 'Technology':
@@ -697,7 +619,6 @@ if __name__ == 'mainfastapi':
                     if juneos_user.status_code < 300:
 
                         fl.info('JuneOS user created!')
-                        # send event status as comment
                         f.send_jira_comment("*JuneOS development* user created.\n"
                                             f"Username: *{suggested_email}*, \n"
                                             f"*[User link|https://dev.junehomes.net/december_access/users/user/{juneos_user.json()['user']['id']}/change/] "
@@ -709,11 +630,6 @@ if __name__ == 'mainfastapi':
                         final_draft = template.render(first_name=first_name,
                                                       suggested_email=suggested_email
                                                       )
-
-                        # with open("C:\PythonProjects\Fastapi\email_templates\juneos_dev.txt", "r") as data:
-                        #     email_template = data.read()
-                        #     username = email_template.replace('{username}', f'<b>{first_name}</b>')
-                        #     final_draft = username.replace('{email}', f'<b>{suggested_email}</b>')
 
                         send_gmail_message.apply_async(
                             (
@@ -740,7 +656,6 @@ if __name__ == 'mainfastapi':
                                             f'*{juneos_user.json()["user"]}*',
                                             jira_key=jira_key)
 
-                # other deps are not ready, due to not released update on prod
                 elif organizational_unit == 'Sales':
                     fl.info('Sales, WIP')
 
@@ -772,11 +687,6 @@ if __name__ == 'mainfastapi':
                         final_draft = template.render(first_name=first_name,
                                                       suggested_email=suggested_email
                                                       )
-
-                        # with open("C:\PythonProjects\Fastapi\email_templates\juneos_prod.txt", "r") as data:
-                        #     email_template = data.read()
-                        #     username = email_template.replace('{username}', f'<b>{first_name}</b>')
-                        #     final_draft = username.replace('{email}', f'<b>{suggested_email}</b>')
 
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
@@ -889,11 +799,6 @@ if __name__ == 'mainfastapi':
                                                       suggested_email=suggested_email
                                                       )
 
-                        # with open("C:\PythonProjects\Fastapi\email_templates\juneos_prod.txt", "r") as data:
-                        #     email_template = data.read()
-                        #     username = email_template.replace('{username}', f'<b>{first_name}</b>')
-                        #     final_draft = username.replace('{email}', f'<b>{suggested_email}</b>')
-
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
                              [suggested_email],
@@ -988,17 +893,11 @@ if __name__ == 'mainfastapi':
                                                        )
 
                     if juneos_user.status_code < 300:
-                        # send event status as comment
 
                         template = env.get_template(name="juneos_jinja.txt")
                         final_draft = template.render(first_name=first_name,
                                                       suggested_email=suggested_email
                                                       )
-
-                        # with open("C:\PythonProjects\Fastapi\email_templates\juneos_prod.txt", "r") as data:
-                        #     email_template = data.read()
-                        #     username = email_template.replace('{username}', f'<b>{first_name}</b>')
-                        #     final_draft = username.replace('{email}', f'<b>{suggested_email}</b>')
 
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
@@ -1019,7 +918,9 @@ if __name__ == 'mainfastapi':
                                             jira_key=jira_key)
 
                         juneos_auth = f.juneos_devprod_authorization(dev_or_prod='prod')
+
                         if juneos_auth.status_code < 300:
+
                             csrftoken = juneos_auth.cookies['csrftoken']
                             sessionid = juneos_auth.cookies['sessionid']
                             token = juneos_auth.json()['token']
@@ -1196,18 +1097,12 @@ if __name__ == 'mainfastapi':
                                                    )
 
                 if juneos_user.status_code < 300:
-                    # send event status as comment
                     fl.info(f'User: {personal_email} is created successfully!')
 
                     template = env.get_template(name="juneos_jinja.txt")
                     final_draft = template.render(first_name=first_name,
                                                   suggested_email=personal_email
                                                   )
-
-                    # with open("C:\PythonProjects\Fastapi\email_templates\juneos_prod.txt", "r") as data:
-                    #     email_template = data.read()
-                    #     username = email_template.replace('{username}', f'<b>{first_name}</b>')
-                    #     final_draft = username.replace('{email}', f'<b>{personal_email}</b>')
 
                     send_gmail_message.apply_async(
                         ('ilya.konovalov@junehomes.com',
@@ -1225,9 +1120,6 @@ if __name__ == 'mainfastapi':
                     template = env.get_template(name="it_services_and_policies_wo_trello_zendesk.txt")
                     final_draft = template.render()
 
-                    # with open("C:\PythonProjects\Fastapi\email_templates\it_services_and_policies_wo_trello_zendesk.txt", "r") as data:
-                    #     final_draft = data.read()
-
                     send_gmail_message.apply_async(
                         ('ilya.konovalov@junehomes.com',
                          [personal_email],
@@ -1239,7 +1131,7 @@ if __name__ == 'mainfastapi':
                         countdown=(round(unix_countdown_time) + 300))
                     # calculates the time before sending the email
                     fl.info(f"IT services and policies email will be sent in {round((unix_countdown_time + 300) / 3600, 2)} hours.")
-                    # send event status as comment
+
                     f.send_jira_comment(f"*IT services and policies* email will be sent in *{round((unix_countdown_time + 300) / 3600, 2)}* hours.",
                                         jira_key=jira_key)
 
