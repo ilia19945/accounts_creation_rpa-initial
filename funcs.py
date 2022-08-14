@@ -355,7 +355,7 @@ def get_juneos_groups_from_position_title(
         file_name,
         # jira_key
 ):
-    with open('permissions_by_orgunits' + file_name, "r") as data:
+    with open('permissions_by_orgunits/' + file_name, "r") as data:
         groups_sales = json.loads(data.read())
         # try:
         #     print(groups_sales[position_title])
