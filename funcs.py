@@ -25,7 +25,7 @@ notion_secret = os.environ.get('NOTION_SECRET')
 
 
 def get_app_info(arg):
-    with open('client_secret_675261997418-4pfe4aep6v3l3pl13lii6p8arsd4md3m.apps.googleusercontent.com.json') as data:
+    with open('client_secret.json') as data:
         json_value = json.load(data)['web'][arg]
         return json_value
 
