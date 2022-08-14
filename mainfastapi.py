@@ -506,22 +506,6 @@ if __name__ == 'mainfastapi':
                             template = env.get_template('it_services_and_policies_wo_trello_zendesk.txt')
                             final_draft = template.render()
 
-                            # sends IT services and policies for member success
-                            send_gmail_message.apply_async(
-                                ('ilya.konovalov@junehomes.com',
-                                 [suggested_email],
-                                 [],
-                                 'IT services and policies',
-                                 final_draft,
-                                 round(unix_countdown_time / 3600)),
-                                queue='new_emps',
-                                countdown=(round(unix_countdown_time) + 300))
-                            fl.info(f"IT services and policies email will be sent in {round((unix_countdown_time + 300) / 3600, 2)} hours.")
-                            f.send_jira_comment("Final is reached!\n"
-                                                f"*IT services and policies* email will be sent in *{round((unix_countdown_time + 300) / 3600, 2)}* "
-                                                "hours.",
-                                                jira_key=jira_key)
-
                             # at the end, when all services are created, an IT security policies email should be sent
                             if organizational_unit == 'Resident Experience':
 
