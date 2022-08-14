@@ -35,7 +35,7 @@ app = FastAPI()
 global jira_key
 jira_key = ''
 
-loader = FileSystemLoader("C:\PythonProjects\Fastapi\email_templates")
+loader = FileSystemLoader(".\\email_templates")
 env = Environment(loader=loader)
 
 # triggers
@@ -328,7 +328,7 @@ if __name__ == 'mainfastapi':
                             if organizational_unit == 'Technology':
 
                                 # Ping Idelia to add the new IT emp to Gitlab and CI/CD
-                                message = open("C:\PythonProjects\Fastapi\mention_idelia.txt", "r", encoding="UTF-8").read()
+                                message = open("mention_idelia.txt", "r", encoding="UTF-8").read()
                                 f.send_jira_comment(message=json.loads(message.replace('suggested_email', suggested_email)),
                                                     jira_key=jira_key)
 

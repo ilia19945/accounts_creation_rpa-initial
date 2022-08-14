@@ -18,7 +18,7 @@ console_handler.setLevel('INFO')
 console_handler.setFormatter(formatter)
 
 # file logging
-file_handler = logging.FileHandler(filename=f'local_logs\\{datetime.date.today().strftime("%m-%d-%Y")}.log', mode='a')
+file_handler = logging.FileHandler(filename=f'.\\local_logs\\{datetime.date.today().strftime("%m-%d-%Y")}.log', mode='a')
 file_handler.setLevel('INFO')
 file_handler.setFormatter(formatter)
 # file_handler.addFilter(LoggingFilter()) #
