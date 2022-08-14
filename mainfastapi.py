@@ -35,7 +35,7 @@ app = FastAPI()
 global jira_key
 jira_key = ''
 
-loader = FileSystemLoader(".\\email_templates")
+loader = FileSystemLoader("email_templates")
 env = Environment(loader=loader)
 
 # triggers
@@ -470,7 +470,7 @@ if __name__ == 'mainfastapi':
                                                             f'*{round((unix_countdown_time / 3600), 2)} hours*.', jira_key)
                                     else:
 
-                                        fl.info(f'ELK Prod user is NOT created! '
+                                        fl.info(f'ELK Prod user is *NOT created!*'
                                                 f'Response: {adding_user_to_elk_prod[0].status_code} '
                                                 f'{adding_user_to_elk_prod[0].json()}')
 
