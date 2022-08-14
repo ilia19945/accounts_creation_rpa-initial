@@ -10,7 +10,7 @@ import funcs as f
 import fast_api_logging as fl
 from tasks import send_gmail_message, create_amazon_user
 
-from fastapi import Body, FastAPI, HTTPException, Query, BackgroundTasks, status
+from fastapi import Body, FastAPI, HTTPException, Query, BackgroundTasks
 from typing import Optional
 from jinja2 import Environment, FileSystemLoader
 
@@ -67,19 +67,32 @@ if __name__ == 'mainfastapi':
         elif code:
             if 60 < len(code) < 85:  # assuming that auth code from Google is about to 73-75 symbols
                 fl.info('Received a request with code from google')
-                file = open('authorization_codes.txt', 'a')
+                file = open('authorization_codes.txt', 'a+')
                 file.write(str(time.asctime()) + ";" + code + '\n')  # add auth code to authorization_codes.txt
                 file.close()
 
-                # fl.info("Jira key: " + jira_key)
                 fl.info(f"Jira key: {jira_key}")
-                f.exchange_auth_code_to_access_refresh_token(code, jira_key)
+                try:
+                    f.exchange_auth_code_to_access_refresh_token(code)
+
+                except Exception as e:
+                    fl.info(e)
+                    f.send_jira_comment("An error occurred while trying to refresh the code:\n"
+                                        f"{e}", jira_key)
+                else:
+                    fl.info('Step 5 executed successfully! Auth code has been exchanged to an access token.\n'
+                            'Please repeat creating a user account attempt.')
+                    f.send_jira_comment('Current Auth token was irrelevant and has been exchanged to a new token.\n'
+                                        'Please repeat creating a user account attempt.\n'
+                                        '(Switch the ticket status -> *"In Progress"* -> *"Create a Google account!"*)',
+                                        jira_key)
+
                 return {"event": "The authorization code has been caught and saved."
                                  f"Close this page and go back to jira ticket tab, please."
                         }
             else:
                 fl.info(f'seems like a wrong value has been sent in the code parameter: {code}')
-                return "Are you serious, bro? Is that really code from google?"
+                return "Are you serious, bro? Is that really a code from google?"
         elif error:
             fl.error('User denied to confirm the permissions!\nMain flow is stopped!')
             return 'User denied to confirm the permissions! Main flow is stopped!'
@@ -90,7 +103,7 @@ if __name__ == 'mainfastapi':
 
     @app.post("/webhook", status_code=200)  # Jira webhook, tag "employee/contractor hiring"
     async def main_flow(background_tasks: BackgroundTasks, body: dict = Body(...)):
-
+        global jira_key
         jira_key = body['issue']['key']
 
         detect_change_type = body['changelog']['items'][0]['field']
@@ -178,14 +191,19 @@ if __name__ == 'mainfastapi':
                 try:
                     access_token = f.get_actual_token('access_token')
                     fl.debug(access_token)
-                    expires_in = f.get_actual_token('expires_in')
-                    fl.info(expires_in)
+                    expires_in_time = f.get_actual_token('expires_in')
+                    fl.info(expires_in_time)
                     token_datetime = f.get_actual_token('datetime')
                     fl.info(token_datetime)
                 except Exception as error:
                     return fl.error(error)
+
+                token_datetime = f.get_actual_token('datetime')
+                current_time = int(time.time())
+                token_time = current_time - int(token_datetime)
+
                 fl.info(msg=f"Access_token: {access_token}\n"
-                            f"datetime: {expires_in}"
+                            f"datetime: {expires_in_time}"
                             f"first_name: {first_name}"
                             f"last_name: {last_name}"
                             f"personal_email: {personal_email}"
@@ -194,11 +212,11 @@ if __name__ == 'mainfastapi':
                             f"personal_phone:{personal_phone}"
                             f"gmail_groups (list): {str(gmail_groups_refined)}"
                             f"hire_start_date: {hire_start_date}"
-                            f"Token lifetime: {str(int(str(time.time_ns())[0:10]) - int(expires_in))}"
+                            f"Token lifetime: {token_time}"
                             f"token_datetime:{token_datetime}"
                         )
-                if int(str(time.time_ns())[0:10]) - int(token_datetime) >= expires_in:  # token was refreshed more than 1h ago
-                    fl.info('Access token expired! Try to get get_actual_token("refresh_token"):')
+                if token_time >= expires_in_time:  # token was refreshed more than 1h ago
+                    fl.info('Access token expired! Trying to get get_actual_token("refresh_token")...')
 
                     try:  # look for refresh token in .json file
                         refresh_token = f.get_actual_token('refresh_token')
@@ -206,7 +224,7 @@ if __name__ == 'mainfastapi':
 
                     except KeyError:  # if there is no refresh token -> new app permission should be requested.
 
-                        fl.info("Refresh token wasn't found.")
+                        fl.info("Refresh token wasn't found in the last google response.")
                         new_access_token = f.get_new_access_token()
                         fl.info(new_access_token)
                         jira_comment_response = f.send_jira_comment(
@@ -217,8 +235,8 @@ if __name__ == 'mainfastapi':
                               "⚠ *REMEMBER: IT'S ONE TIME LINK! SHOULD BE DELETED AFTER REFRESHING* ⚠\n"
                               "(It's recommended to open in a new browser tab)\n",
                             jira_key)
-                        if jira_comment_response[0] > 300:
-                            fl.error(f"Jira comment wasn't added. {jira_comment_response[1]}")
+                        if jira_comment_response.status_code > 300:
+                            fl.error(f"Jira comment wasn't added. {jira_comment_response.json()}")
 
                         fl.info("Jira comment was added successfully")
 
@@ -314,6 +332,7 @@ if __name__ == 'mainfastapi':
                                 f.send_jira_comment(message=json.loads(message.replace('suggested_email', suggested_email)),
                                                     jira_key=jira_key)
 
+                                # надо все через Try except сделать, иначе будет падать(
                                 # adding IT emp to calendar
                                 calendar_id = 'junehomes.com_6f1l2kssibhmsg10e7fvnmdv1o@group.calendar.google.com'
                                 adding_to_calendar_result = f.adding_to_junehomes_dev_calendar(suggested_email=suggested_email,
@@ -367,87 +386,97 @@ if __name__ == 'mainfastapi':
                                                         f"Error body: {adding_user_to_jira[1]}", jira_key)
 
                                 # creating account on ELK Development
-                                adding_user_to_elk_dev = f.create_elk_user(firstname=first_name,
-                                                                           lastname=last_name,
-                                                                           suggested_email=suggested_email,
-                                                                           role='viewer',
-                                                                           dev_or_prod='dev'
-                                                                           )
-
-                                if adding_user_to_elk_dev[0].status_code < 300:
-
-                                    fl.info(f'ELK Dev user is created. ELK dev credentials will be sent in: '
-                                            f'*{round(unix_countdown_time / 3600)} hours*.')
-                                    f.send_jira_comment(f'ELK Dev user is created. ELK dev credentials will be sent in: '
-                                                        f'*{round(unix_countdown_time / 3600)} hours*.', jira_key)
-
-                                    template = env.get_template(name="kibana_jinja.txt")
-
-                                    final_draft = template.render(first_name=first_name,
-                                                                  suggested_email=suggested_email,
-                                                                  stage="Development",
-                                                                  password=adding_user_to_elk_dev[1]
-                                                                  )
-
-                                    send_gmail_message.apply_async(
-                                        ('ilya.konovalov@junehomes.com',
-                                         [personal_email],
-                                         ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', supervisor_email],
-                                         'Your Kibana.Development credentials.',
-                                         final_draft,
-                                         round(unix_countdown_time / 3600)),
-                                        queue='new_emps',
-                                        countdown=round(unix_countdown_time))
-
-                                else:
-                                    fl.info(f'ELK Dev user is NOT created!\n'
-                                            f'Response:{adding_user_to_elk_dev[0].status_code}\n'
-                                            f'{adding_user_to_elk_dev[0].json()}')
-
-                                    f.send_jira_comment(f'ELK Dev user is *NOT created*!\n'
-                                                        f'Response:{adding_user_to_elk_dev[0].status_code}\n'
-                                                        f'{adding_user_to_elk_dev[0].json()}', jira_key)
-
-                                adding_user_to_elk_prod = f.create_elk_user(firstname=first_name,
-                                                                            lastname=last_name,
-                                                                            suggested_email=suggested_email,
-                                                                            role='viewer',
-                                                                            dev_or_prod='prod'
-                                                                            )
-
-                                if adding_user_to_elk_prod[0].status_code < 300:
-
-                                    template = env.get_template(name="kibana_jinja.txt")
-
-                                    final_draft = template.render(first_name=first_name,
-                                                                  suggested_email=suggested_email,
-                                                                  stage="Production",
-                                                                  password=adding_user_to_elk_dev[1]
-                                                                  )
-
-                                    send_gmail_message.apply_async(
-                                        ('ilya.konovalov@junehomes.com',
-                                         [personal_email],
-                                         ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', supervisor_email],
-                                         'Your Kibana.Production credentials.',
-                                         final_draft,
-                                         round(unix_countdown_time / 3600)),
-                                        queue='new_emps',
-                                        countdown=round(unix_countdown_time))
-
-                                    fl.info(f'ELK Prod user is created. ELK Prod credentials will be sent in: '
-                                            f'*{round((unix_countdown_time / 3600), 2)} hours*.')
-                                    f.send_jira_comment(f'ELK Prod user is created. ELK Prod credentials will be sent in: '
-                                                        f'*{round((unix_countdown_time / 3600), 2)} hours*.', jira_key)
+                                try:
+                                    adding_user_to_elk_dev = f.create_elk_user(firstname=first_name,
+                                                                               lastname=last_name,
+                                                                               suggested_email=suggested_email,
+                                                                               role='viewer',
+                                                                               dev_or_prod='dev'
+                                                                               )
+                                except Exception as e:
+                                    f.send_jira_comment('An error occurred when trying to add a user on ELK DEV:\n'
+                                                        f'{e}',jira_key)
                                 else:
 
-                                    fl.info(f'ELK Prod user is NOT created! '
-                                            f'Response: {adding_user_to_elk_prod[0].status_code} '
-                                            f'{adding_user_to_elk_prod[0].json()}')
+                                    if adding_user_to_elk_dev[0].status_code < 300:
 
-                                    f.send_jira_comment(f'ELK Prod user is NOT created!\n'
-                                                        f'Response:{adding_user_to_elk_prod[0].status_code}\n'
-                                                        f'{adding_user_to_elk_prod[0].json()}', jira_key)
+                                        fl.info(f'ELK Dev user is created. ELK dev credentials will be sent in: '
+                                                f'*{round(unix_countdown_time / 3600)} hours*.')
+                                        f.send_jira_comment(f'ELK Dev user is created. ELK dev credentials will be sent in: '
+                                                            f'*{round(unix_countdown_time / 3600)} hours*.', jira_key)
+
+                                        template = env.get_template(name="kibana_jinja.txt")
+
+                                        final_draft = template.render(first_name=first_name,
+                                                                      suggested_email=suggested_email,
+                                                                      stage="Development",
+                                                                      password=adding_user_to_elk_dev[1]
+                                                                      )
+
+                                        send_gmail_message.apply_async(
+                                            ('ilya.konovalov@junehomes.com',
+                                             [personal_email],
+                                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', supervisor_email],
+                                             'Your Kibana.Development credentials.',
+                                             final_draft,
+                                             round(unix_countdown_time / 3600)),
+                                            queue='new_emps',
+                                            countdown=round(unix_countdown_time))
+
+                                    else:
+                                        fl.info(f'ELK Dev user is NOT created!\n'
+                                                f'Response:{adding_user_to_elk_dev[0].status_code}\n'
+                                                f'{adding_user_to_elk_dev[0].json()}')
+
+                                        f.send_jira_comment(f'ELK Dev user is *NOT created*!\n'
+                                                            f'Response:{adding_user_to_elk_dev[0].status_code}\n'
+                                                            f'{adding_user_to_elk_dev[0].json()}', jira_key)
+
+                                try:
+                                    adding_user_to_elk_prod = f.create_elk_user(firstname=first_name,
+                                                                                lastname=last_name,
+                                                                                suggested_email=suggested_email,
+                                                                                role='viewer',
+                                                                                dev_or_prod='prod'
+                                                                                )
+                                except Exception as e:
+                                    f.send_jira_comment('An error occurred when trying to add a user on ELK PROD:\n'
+                                                        f'{e}',jira_key)
+                                else:
+
+                                    if adding_user_to_elk_prod[0].status_code < 300:
+
+                                        template = env.get_template(name="kibana_jinja.txt")
+
+                                        final_draft = template.render(first_name=first_name,
+                                                                      suggested_email=suggested_email,
+                                                                      stage="Production",
+                                                                      password=adding_user_to_elk_dev[1]
+                                                                      )
+
+                                        send_gmail_message.apply_async(
+                                            ('ilya.konovalov@junehomes.com',
+                                             [personal_email],
+                                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', supervisor_email],
+                                             'Your Kibana.Production credentials.',
+                                             final_draft,
+                                             round(unix_countdown_time / 3600)),
+                                            queue='new_emps',
+                                            countdown=round(unix_countdown_time))
+
+                                        fl.info(f'ELK Prod user is created. ELK Prod credentials will be sent in: '
+                                                f'*{round((unix_countdown_time / 3600), 2)} hours*.')
+                                        f.send_jira_comment(f'ELK Prod user is created. ELK Prod credentials will be sent in: '
+                                                            f'*{round((unix_countdown_time / 3600), 2)} hours*.', jira_key)
+                                    else:
+
+                                        fl.info(f'ELK Prod user is NOT created! '
+                                                f'Response: {adding_user_to_elk_prod[0].status_code} '
+                                                f'{adding_user_to_elk_prod[0].json()}')
+
+                                        f.send_jira_comment(f'ELK Prod user is NOT created!\n'
+                                                            f'Response:{adding_user_to_elk_prod[0].status_code}\n'
+                                                            f'{adding_user_to_elk_prod[0].json()}', jira_key)
 
                             # create a template for email
 
@@ -474,13 +503,32 @@ if __name__ == 'mainfastapi':
                                                 f"User: *{personal_email}*\n"
                                                 f"In: *{round((unix_countdown_time / 3600), 2)}* hours.\n", jira_key)
 
+                            template = env.get_template('it_services_and_policies_wo_trello_zendesk.txt')
+                            final_draft = template.render()
+
+                            # sends IT services and policies for member success
+                            send_gmail_message.apply_async(
+                                ('ilya.konovalov@junehomes.com',
+                                 [suggested_email],
+                                 [],
+                                 'IT services and policies',
+                                 final_draft,
+                                 round(unix_countdown_time / 3600)),
+                                queue='new_emps',
+                                countdown=(round(unix_countdown_time) + 300))
+                            fl.info(f"IT services and policies email will be sent in {round((unix_countdown_time + 300) / 3600, 2)} hours.")
+                            f.send_jira_comment("Final is reached!\n"
+                                                f"*IT services and policies* email will be sent in *{round((unix_countdown_time + 300) / 3600, 2)}* "
+                                                "hours.",
+                                                jira_key=jira_key)
+
                             # at the end, when all services are created, an IT security policies email should be sent
                             if organizational_unit == 'Resident Experience':
 
                                 template = env.get_template('it_services_and_policies_support.txt')
                                 final_draft = template.render()
 
-                                # sends IT services and policies for member success
+                                # sends IT services and policies for residents experience
                                 send_gmail_message.apply_async(
                                     ('ilya.konovalov@junehomes.com',
                                      [suggested_email],

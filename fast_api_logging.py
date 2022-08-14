@@ -1,6 +1,6 @@
 import datetime
 import logging
-from es_connection import client
+# from es_connection import client
 
 logger = logging.getLogger()
 
@@ -55,15 +55,15 @@ class ErrorCriticalFilter(logging.Filter):
 
 
 def info(msg):
-    client.capture_message(str(msg))
+    # client.capture_message(str(msg))
     logging.info(msg)
 
 
 def debug(msg):
-    client.capture_message(str(msg))
+    # client.capture_message(str(msg))
     logging.debug(msg)
 
 
 def error(msg):
-    client.capture_message(str(msg))
+    # client.capture_message(str(msg))
     logging.error(msg, exc_info=True)

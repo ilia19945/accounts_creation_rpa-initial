@@ -37,6 +37,10 @@ def get_actual_token(arg):
         newest_data = data.read().split('\n')[-2]
         token = json.loads(newest_data)[arg]
         return token
+    # f = open(r'''C:\PythonProjects\Fastapi\access_refresh_tokens.json''')
+    # data = json.load(f)
+    # # print(data)
+    # return data["tokens"][-1][arg]
 
 
 """make the http request to refresh the token Step 2:
@@ -67,37 +71,31 @@ def get_new_access_token():
 https://developers.google.com/identity/protocols/oauth2/web-server#exchange-authorization-code"""
 
 
-def exchange_auth_code_to_access_refresh_token(code, jira_key):
+def exchange_auth_code_to_access_refresh_token(code):
     request_row = 'https://oauth2.googleapis.com/token?' \
                   f'code={code}&' \
                   f'client_id={get_app_info("client_id")}&' \
                   f'client_secret={get_app_info("client_secret")}&' \
                   f'redirect_uri={get_app_info("redirect_uris")[0]}&' \
                   'grant_type=authorization_code'
-    # print(request_row)
     response = requests.post(request_row)  # send and receives response
 
     # print(response.headers)  # receives headers in dict
     fl.info(response.json())  # receives body in dict
     refreshed_token = response.json()
     if refreshed_token.get("error") is None:
-        refreshed_token['datetime'] = str(time.time_ns())[0:10]  # append datetime to dict
+        refreshed_token['datetime'] = str(int(time.time()))  # append datetime to dict
         # print(refreshed_token)  # receives body in dict
         refreshed_token = json.dumps(refreshed_token)  # convert dict to json
-
-        # print(refreshed_token)
         # write json to the end of the file
-        file = open('access_refresh_tokens.json', 'a')
-        file.write(str(refreshed_token) + '\n')
-        file.close()
-        fl.info('Step 5 executed successfully! Auth code has been exchanged to an access token.\n'
-                'Please repeat creating a user account attempt.')
-        send_jira_comment('Current Auth token was irrelevant and has been exchanged to a new token.\n'
-                          'Please repeat creating a user account attempt.\n'
-                          '(Switch the ticket status -> *"In Progress"* -> *"Create a Google account!"*)',
-                          jira_key)
+        with open('access_refresh_tokens.json', 'a') as file:
+            file.write(str(refreshed_token) + '\n')
+        return
+
     else:
+        print('Error received')
         fl.info(response)
+        return response
 
 
 # initiates the refreshing token process WHEN WE HAVE REFRESH TOKEN in the latest google response
@@ -113,7 +111,7 @@ def refresh_token_func():
     # print(refreshed_token.headers)  # receives headers in dict
     # print(refreshed_token.json())  # receives body in dict
     refreshed_token = refreshed_token.json()
-    refreshed_token['datetime'] = str(time.time_ns())[0:10]  # append datetime to dict
+    refreshed_token['datetime'] = str(int(time.time()))  # append datetime to dict
 
     # print(refreshed_token)  # receives body in dict
     refreshed_token = json.dumps(refreshed_token)  # convert dict to json
@@ -275,7 +273,7 @@ def send_jira_comment(message, jira_key):
             {"body": f"{message}"})
     jira_notification = requests.post(url=url, headers=headers, data=data)
 
-    return jira_notification.status_code, jira_notification.json()
+    return jira_notification
 
 
 def juneos_devprod_authorization(dev_or_prod):
