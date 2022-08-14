@@ -548,11 +548,11 @@ if __name__ == 'mainfastapi':
                                 final_draft = template.render()
 
                                 # sends it_services_and_policies_wo_trello_zendesk email to gmail
-                                send_gmail_message(to=f"{suggested_email}",
-                                                   sender='ilya.konovalov@junehomes.com',
-                                                   cc='',
-                                                   subject='IT services and policies',
-                                                   message_text=final_draft)
+                                # send_gmail_message(to=f"{suggested_email}",
+                                #                    sender='ilya.konovalov@junehomes.com',
+                                #                    cc='',
+                                #                    subject='IT services and policies',
+                                #                    message_text=final_draft)
 
                                 send_gmail_message.apply_async(
                                     ('ilya.konovalov@junehomes.com',
