@@ -350,20 +350,9 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
     return juneos_user
 
 
-def get_juneos_groups_from_position_title(
-        # position_title,
-        file_name,
-        # jira_key
-):
+def get_juneos_groups_from_position_title(file_name):
     with open('permissions_by_orgunits/' + file_name, "r") as data:
         groups_sales = json.loads(data.read())
-        # try:
-        #     print(groups_sales[position_title])
-        # except KeyError as error:
-        #     print('KeyError when trying to match employee position with JuneOS groups!')
-        #     send_jira_comment(f"An error occurred while trying to match employee position with JuneOS groups. \n "
-        #                         f" No position with title: *{error}*",
-        #                         jira_key=jira_key)
         return groups_sales
 
 
