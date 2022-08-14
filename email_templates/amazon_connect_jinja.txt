@@ -1,0 +1,11 @@
+<p style="font-family:verdana">Hi {{ first_name }},</p>
+
+<p style="font-family:verdana">Here's your access to Amazon Connect:</p>
+
+<p style="font-family:verdana">- username:  <b>{{ suggested_email }}</b></p>
+<p style="font-family:verdana">- password:  <b>{{ amazon_password }}</b></p>
+
+<p style="font-family:verdana">Please use https://junehomes.awsapps.com/connect/ccp-v2#/ to log in.
+<br>
+<br>
+{% include 'footer.txt' %}

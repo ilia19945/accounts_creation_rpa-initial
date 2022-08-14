@@ -1,0 +1,11 @@
+<p style="font-family:verdana">Hi {{ first_name }},</p>
+
+<p style="font-family:verdana">Here's your access to Kibana {{ stage }} account:</p>
+
+<p style="font-family:verdana">- username: <b> {{ suggested_email }</b></p>
+<p style="font-family:verdana">- password: <b> {{ password }}</b></p>
+
+<p style="font-family:verdana">Please use {{ login_link }} to log in.</p>
+<br>
+<br>
+{% include 'footer.txt' %}

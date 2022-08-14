@@ -1,0 +1,19 @@
+<p style="font-family:verdana">Hi {{ first_name }},</p>
+
+<p style="font-family:verdana">Here is a quick instruction on how to log in to JuneOS.</p>
+
+<p style="font-family:verdana">Go to https://dev.junehomes.net/december_access/. 
+<br>In popup message use
+<br> - login: <b>dev</b>
+<br> - password: <b>dev2020</b> 
+<br>to login. 
+<br> You do not need to fill anything in the JuneOS log in form.</p>
+
+<p style="font-family:verdana">Click the "Sign in with Google" button in the bottom right.</p>
+
+<p style="font-family:verdana">Use your corporate email {{ suggested_email }} and password to sign in to Google in the new window that pops up.</p>
+
+<p style="font-family:verdana">Voilà, JuneOS signs you in!</p>
+<br>
+<br>
+{% include 'footer.txt' %}

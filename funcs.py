@@ -32,7 +32,7 @@ def get_app_info(arg):
 
 # returns the actual token
 def get_actual_token(arg):
-    with open(r'''C:\PythonProjects\Fastapi\access_refresh_tokens.json''') as data:
+    with open(r'''access_refresh_tokens.json''') as data:
         # open the file and parse it to the latest json
         newest_data = data.read().split('\n')[-2]
         token = json.loads(newest_data)[arg]
@@ -132,7 +132,7 @@ def create_google_user_req(first_name, last_name, suggested_email, organizationa
     password = ''.join(random.choice(characters) for i in range(8))
     """google response with another status which means that the account is not can be created."""
 
-    file = open(r'''C:\Users\ilia1\Desktop\June Homes\User Accounts.txt''', 'a', encoding='utf-8')
+    file = open(r'''User Accounts.txt''', 'a', encoding='utf-8')
 
     # fl.info(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
     fl.info(f"{first_name} {last_name}\nUsername: {suggested_email}")
@@ -355,7 +355,7 @@ def get_juneos_groups_from_position_title(
         file_name,
         # jira_key
 ):
-    with open('C:\PythonProjects\Fastapi\permissions_by_orgunits\\' + file_name, "r") as data:
+    with open('permissions_by_orgunits\\' + file_name, "r") as data:
         groups_sales = json.loads(data.read())
         # try:
         #     print(groups_sales[position_title])
