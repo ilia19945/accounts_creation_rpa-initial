@@ -135,16 +135,18 @@ def create_amazon_user(suggested_email,
                 return
 
             else:  # no errors normal flow
+
+                # adding the credentials to txt file
+                file = open(r'''User Accounts.txt''', 'a', encoding='utf-8')
+                file.write(f"Amazon username: {suggested_email}\nPassword: {password}\n\n")
+                file.close()
+
                 fl.info('*Amazon account* is created successfully!\n'
                         f'An email with Amazon account credentials will be sent to {suggested_email}')
                 send_jira_comment('*Amazon account* is created successfully!\n'
                                   f'An email with Amazon account credentials will be sent to *{suggested_email}* '
                                   f'in *{round(unix_countdown_time / 3600)}* hours\n',
                                   jira_key=jira_key)
-
-                file = open(r'''User Accounts.txt''', 'a', encoding='utf-8')
-                file.write(f"Amazon username: {suggested_email}\nPassword: {password}\n\n")
-                file.close()
 
                 # normal flow - returns another celery task to send the email
                 return send_gmail_message.apply_async(
