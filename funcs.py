@@ -132,8 +132,6 @@ def create_google_user_req(first_name, last_name, suggested_email, organizationa
     password = ''.join(random.choice(characters) for i in range(8))
     """google response with another status which means that the account is not can be created."""
 
-    file = open(r'''User Accounts.txt''', 'a', encoding='utf-8')
-
     # fl.info(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
     fl.info(f"{first_name} {last_name}\nUsername: {suggested_email}")
     url = 'https://admin.googleapis.com/admin/directory/v1/users/'
@@ -162,6 +160,7 @@ def create_google_user_req(first_name, last_name, suggested_email, organizationa
                              headers=headers,
                              data=payload)
     if response.status_code < 300:
+        file = open(r'''User Accounts.txt''', 'a', encoding='utf-8')
         file.write(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
         file.close()
     elif response.status_code >= 500:

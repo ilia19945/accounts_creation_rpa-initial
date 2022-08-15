@@ -421,7 +421,8 @@ if __name__ == 'mainfastapi':
                                              final_draft,
                                              round(unix_countdown_time / 3600)),
                                             queue='new_emps',
-                                            countdown=round(unix_countdown_time))
+                                            countdown=round(unix_countdown_time) + 120
+                                        )
 
                                     else:
                                         fl.info(f'ELK Dev user is NOT created!\n'
@@ -462,7 +463,8 @@ if __name__ == 'mainfastapi':
                                              final_draft,
                                              round(unix_countdown_time / 3600)),
                                             queue='new_emps',
-                                            countdown=round(unix_countdown_time))
+                                            countdown=round(unix_countdown_time) + 120
+                                        )
 
                                         fl.info(f'ELK Prod user is created. ELK Prod credentials will be sent in: '
                                                 f'*{round((unix_countdown_time / 3600), 2)} hours*.')
@@ -494,7 +496,8 @@ if __name__ == 'mainfastapi':
                                  final_draft,
                                  round(unix_countdown_time / 3600)),
                                 queue='new_emps',
-                                countdown=round(unix_countdown_time))
+                                countdown=round(unix_countdown_time) + 120
+                            )
                             fl.info(f'June Homes: corporate email account will be sent in {round((unix_countdown_time / 3600), 2)}')
 
                             # calculates the time before sending the email
@@ -521,7 +524,8 @@ if __name__ == 'mainfastapi':
                                      final_draft,
                                      round(unix_countdown_time / 3600)),
                                     queue='new_emps',
-                                    countdown=(round(unix_countdown_time) + 300))
+                                    countdown=round(unix_countdown_time) + 600
+                                )
 
                                 # calculates the time before sending the email
                                 fl.info(f'June Homes: corporate email account will be sent in {round((unix_countdown_time / 3600), 2)}')
@@ -546,7 +550,8 @@ if __name__ == 'mainfastapi':
                                      final_draft,
                                      round(unix_countdown_time / 3600)),
                                     queue='new_emps',
-                                    countdown=(round(unix_countdown_time) + 300))
+                                    countdown=round(unix_countdown_time) + 600
+                                )
 
                                 # calculates the time before sending the email
                                 fl.info(f"IT services and policies email will be sent in {round((unix_countdown_time + 300) / 3600, 2)} hours.")
@@ -673,7 +678,7 @@ if __name__ == 'mainfastapi':
                                 round(unix_countdown_time / 3600)
                             ),
                             queue='new_emps',
-                            countdown=round(unix_countdown_time)
+                            countdown=round(unix_countdown_time) + 120
                         )
 
                         fl.info(f"Tome to send: {str(round(unix_countdown_time / 3600))}")
@@ -729,7 +734,7 @@ if __name__ == 'mainfastapi':
                              round(unix_countdown_time / 3600)
                              ),
                             queue='new_emps',
-                            countdown=round(unix_countdown_time)
+                            countdown=round(unix_countdown_time) + 120
                         )
                         fl.info(f"email 'Access to JuneOS property management system' will be sent in: {round(unix_countdown_time / 3600)}*, \n")
                         f.send_jira_comment("*JuneOS* user created.\n"
@@ -840,7 +845,7 @@ if __name__ == 'mainfastapi':
                              round(unix_countdown_time / 3600)
                              ),
                             queue='new_emps',
-                            countdown=round(unix_countdown_time)
+                            countdown=round(unix_countdown_time) + 120
                         )
 
                         fl.info(f"email 'Access to JuneOS property management system' will be sent in: {round(unix_countdown_time / 3600)}*, \n")
@@ -940,7 +945,7 @@ if __name__ == 'mainfastapi':
                              round(unix_countdown_time / 3600)
                              ),
                             queue='new_emps',
-                            countdown=round(unix_countdown_time)
+                            countdown=round(unix_countdown_time) + 120
                         )
                         fl.info(f"email 'Access to JuneOS property management system' will be sent in: {round(unix_countdown_time / 3600)}*, \n")
                         f.send_jira_comment("*JuneOS* user created.\n"
@@ -1145,7 +1150,7 @@ if __name__ == 'mainfastapi':
                          round(unix_countdown_time / 3600)
                          ),
                         queue='new_emps',
-                        countdown=round(unix_countdown_time)
+                        countdown=round(unix_countdown_time) + 120
                     )
                     fl.info(f"email 'Access to JuneOS property management system' will be sent in: {round(unix_countdown_time / 3600)}*, \n")
 
@@ -1160,7 +1165,7 @@ if __name__ == 'mainfastapi':
                          final_draft,
                          round(unix_countdown_time / 3600)),
                         queue='new_emps',
-                        countdown=(round(unix_countdown_time) + 300))
+                        countdown=(round(unix_countdown_time) + 600))
                     # calculates the time before sending the email
                     fl.info(f"IT services and policies email will be sent in {round((unix_countdown_time + 300) / 3600, 2)} hours.")
 

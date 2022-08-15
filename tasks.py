@@ -27,7 +27,7 @@ def send_gmail_message(sender, to, cc, subject, message_text, countdown):
 
     recipients = to + cc
 
-    server = smtplib.SMTP('smtp.gmail.com: 587')
+    server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
     server.login(sender, gmail_app_password)
     server.sendmail(from_addr=sender, to_addrs=recipients, msg=message.as_string())
@@ -141,7 +141,10 @@ def create_amazon_user(suggested_email,
                                   f'An email with Amazon account credentials will be sent to *{suggested_email}* '
                                   f'in *{round(unix_countdown_time / 3600)}* hours\n',
                                   jira_key=jira_key)
-                print('the account is created!')
+
+                file = open(r'''User Accounts.txt''', 'a', encoding='utf-8')
+                file.write(f"Amazon username: {suggested_email}\nPassword: {password}\n\n")
+                file.close()
 
                 # normal flow - returns another celery task to send the email
                 return send_gmail_message.apply_async(
@@ -152,7 +155,7 @@ def create_amazon_user(suggested_email,
                      final_draft,
                      round(unix_countdown_time / 3600)),
                     queue='new_emps',
-                    countdown=round(unix_countdown_time))
+                    countdown=round(unix_countdown_time + 120))
 
         else:
             print("Iteration: ", i)
