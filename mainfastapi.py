@@ -164,9 +164,9 @@ if __name__ == 'mainfastapi':
             user_email_analogy = jira_description[jira_description.index('*If needs access to the telephony system, describe details (e.g. permissions and settings like which existing user?)*') + 1]
 
             if organizational_unit in ['Technology', 'Brand Marketing']:
-                unix_hire_start_date += 28800
+                unix_hire_start_date += 14400  # 28800 - for Moscow, 14400 for EDT
             else:
-                unix_hire_start_date += 46800
+                unix_hire_start_date += 32400  # 46800 - for Moscow, 32400 for EDT
 
             fl.info(f"The type of the date is now {str(unix_hire_start_date)}")
             unix_countdown_time = unix_hire_start_date - round(time.time())
