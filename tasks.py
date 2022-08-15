@@ -147,7 +147,7 @@ def create_amazon_user(suggested_email,
                 return send_gmail_message.apply_async(
                     ('ilya.konovalov@junehomes.com',
                      [suggested_email],
-                     ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
+                     ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
                      'Access to Amazon Connect call center',
                      final_draft,
                      round(unix_countdown_time / 3600)),

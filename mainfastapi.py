@@ -416,7 +416,7 @@ if __name__ == 'mainfastapi':
                                         send_gmail_message.apply_async(
                                             ('ilya.konovalov@junehomes.com',
                                              [personal_email],
-                                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', supervisor_email],
+                                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com', supervisor_email],
                                              'Your Kibana.Development credentials.',
                                              final_draft,
                                              round(unix_countdown_time / 3600)),
@@ -457,7 +457,7 @@ if __name__ == 'mainfastapi':
                                         send_gmail_message.apply_async(
                                             ('ilya.konovalov@junehomes.com',
                                              [personal_email],
-                                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', supervisor_email],
+                                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com', supervisor_email],
                                              'Your Kibana.Production credentials.',
                                              final_draft,
                                              round(unix_countdown_time / 3600)),
@@ -489,7 +489,7 @@ if __name__ == 'mainfastapi':
                             send_gmail_message.apply_async(
                                 ('ilya.konovalov@junehomes.com',
                                  [personal_email],
-                                 ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', supervisor_email],
+                                 ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com', supervisor_email],
                                  'June Homes: corporate email account',
                                  final_draft,
                                  round(unix_countdown_time / 3600)),
@@ -667,7 +667,7 @@ if __name__ == 'mainfastapi':
                             (
                                 'ilya.konovalov@junehomes.com',
                                 [suggested_email],
-                                ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
+                                ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com' ],
                                 'Access to JuneOS.Development property management system',
                                 final_draft,
                                 round(unix_countdown_time / 3600)
@@ -723,7 +723,7 @@ if __name__ == 'mainfastapi':
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
                              [suggested_email],
-                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
+                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
                              'Access to JuneOS property management system',
                              final_draft,
                              round(unix_countdown_time / 3600)
@@ -834,7 +834,7 @@ if __name__ == 'mainfastapi':
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
                              [suggested_email],
-                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
+                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
                              'Access to JuneOS property management system',
                              final_draft,
                              round(unix_countdown_time / 3600)
@@ -934,7 +934,7 @@ if __name__ == 'mainfastapi':
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
                              [suggested_email],
-                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
+                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
                              'Access to JuneOS property management system',
                              final_draft,
                              round(unix_countdown_time / 3600)
@@ -1139,7 +1139,7 @@ if __name__ == 'mainfastapi':
                     send_gmail_message.apply_async(
                         ('ilya.konovalov@junehomes.com',
                          [personal_email],
-                         ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com'],
+                         ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
                          'Access to JuneOS property management system',
                          final_draft,
                          round(unix_countdown_time / 3600)
