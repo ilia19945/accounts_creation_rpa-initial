@@ -10,3 +10,4 @@ console = logging.StreamHandler()
 # add the handler to the root logger
 logging.getLogger("").addHandler(console)
 # client = Client()  # took example from Client() class description, the example on the docunetation doesn't work
+

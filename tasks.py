@@ -8,6 +8,8 @@ import smtplib
 import fast_api_logging as fl
 
 celery_app = Celery('tasks', backend='redis://localhost', broker='redis://localhost', queue='new_emps,terminations,other')
+celery_app.conf.broker_transport_options = {'visibility_timeout': 2592000} #30 days
+
 fl.info('Celery server has successfully initialised.')
 
 # to run celery with 3 queues type in terminal:
