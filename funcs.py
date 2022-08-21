@@ -1,4 +1,5 @@
 import json
+import re
 import time
 import requests
 import string
@@ -451,6 +452,7 @@ def create_draft_message(sender, to, cc, subject, message_text):
 
 """amazon account creation function is moved to tasks.py"""
 
+
 def delete_amazon_user(user_email):
     # user_email - will need to search for the user email
     # search a user and retrieve its ID:
@@ -569,7 +571,7 @@ def notion_search_for_role(position_title, jira_key):
     # pprint(response.json(), indent=1)
 
     if len(response.json()['results']) == 0:  # if there is no role with this name
-        pprint(response.json()['results'], indent=1)
+        # pprint(response.json()['results'], indent=1)
         # print(f'the value "{position_title}" does not exist in column "Role/Persona name"')
         send_jira_comment(f'the value "*{position_title}*" does not exist in column "Role/Persona name" ❌', jira_key=jira_key)
         return False
@@ -578,6 +580,7 @@ def notion_search_for_role(position_title, jira_key):
         print('The role found')
         permissions_for_persona = response.json()['results'][0]['properties']['Permissions for persona']['relation']
         # print(len(permissions_for_persona))
+        # print(permissions_for_persona)
         if len(response.json()['results']) == 0:
             return permissions_for_persona
 
@@ -612,32 +615,27 @@ def notion_search_for_permission_block_children(block_id):
 
     check_permissions = False
 
-    for i in range(len(response.json()['results'])):
-        if 'toggle' in response.json()['results'][i]:
-            if 'code' in response.json()['results'][i]:
-                print('code block found on the page!')
-                permissions = response.json()['results'][i]['code']['rich_text'][0]['text']['content']
-                try:
-                    print('validating JSON ... ')
-                    permissions_json: object = json.loads(permissions)
-                    pprint(permissions_json, indent=1)
-                    check_permissions = True
-                    print('validated')
+    for i in range(len(response.json()['results'])):  # for every block on the page
+        # pprint(response.json()['results'][i], indent=1)
+        if 'code' in response.json()['results'][i]:
+            print('code block found on the page!')
+            permissions = response.json()['results'][i]['code']['rich_text'][0]['text']['content']
+            try:
+                print('Parsing...')
+                permissions_dict = json.loads(permissions)
+                print('Permissions are parsed!')
+                check_permissions = True
 
-                except Exception as e:
-                    # print(f"failed. JSON Error: {e}")
-                    return f"validation failed. JSON Error: {e} ⚠️"
-            else:
-                return "Add code block to the permissions page ⚠️ "
+            except Exception as e:
+                return f"validation failed. JSON Error: {e} ⚠️"
 
         else:
-            return "Toggle is not added to permissions page ⚠️"
+            pass
 
     if check_permissions:
-        return permissions_json, True
+        return dict(permissions_dict), True
     else:
-        # print('Please add JSON block to the document to the root level on the body page')
-        return 'Please add "/toggle" block containing the valid JSON block to the body page ⚠️'
+        return 'Please add JSON block to the body page ⚠️'
 
 
 def get_notion_page_title(page_id):
@@ -650,5 +648,32 @@ def get_notion_page_title(page_id):
     }
 
     response = requests.request("GET", url, headers=headers, data=payload)
-    # pprint(response.json(),indent=1)
     return response
+
+
+def fetching_params_from_file(filename_contains: str, jsonvalue: str, jira_key: str, position_title: str):
+    directory = f".\\roles_configs\\{jira_key}\\{position_title}"
+    # print(directory)
+    for item in os.listdir(directory):
+        # print(os.listdir(directory))
+        # print(item)
+        if os.path.isfile(os.path.join(directory, item)):  # creating a list of files in the directory
+            if re.search(filename_contains, item):  # searching for a jsonvalue file in the directory
+                with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{item}") as file:
+                    try:
+                        organizational_unit = json.loads(file.read())
+                        if jsonvalue in organizational_unit:
+                            organizational_unit = organizational_unit[jsonvalue]
+                            return organizational_unit
+                        else:
+                            print('Org unit is not found')
+                            # return None
+                    except Exception as e:
+                        print(f"Error: {e}")
+                        # return None
+            else:
+                print(f'"{item}" - doesn\'t contain "{filename_contains}"')
+                # return None
+        else:
+            print(f'"{item}" - is not a file')
+            # return None

@@ -1,6 +1,9 @@
+import json
+import os
+
 import boto3
 
-from funcs import gmail_app_password, send_jira_comment
+from funcs import gmail_app_password, send_jira_comment, notion_search_for_role, notion_search_for_permission_block_children, get_notion_page_title
 from celery import Celery
 
 from email.mime.text import MIMEText
@@ -9,7 +12,6 @@ import fast_api_logging as fl
 
 celery_app = Celery('tasks', backend='redis://localhost', broker='redis://localhost', queue='new_emps,terminations,other')
 celery_app.conf.broker_transport_options = {'visibility_timeout': 2592000} #30 days
-
 fl.info('Celery server has successfully initialised.')
 
 # to run celery with 3 queues type in terminal:
@@ -50,8 +52,8 @@ def create_amazon_user(suggested_email,
     client = boto3.client('connect')
     instance_id = 'a016cbe1-24bf-483a-b2cf-a73f2f389cb4'
 
-    send_jira_comment(f'*Celery* task to create Amazon account for *{suggested_email}* is added.\n'
-                      'Please wait ...', jira_key)
+    send_jira_comment(f'*Celery task* to create Amazon account for *"{suggested_email}"* is added.\n'
+                      'Please, wait...', jira_key)
 
     # receives a list of users
     response = client.list_users(
@@ -151,15 +153,15 @@ def create_amazon_user(suggested_email,
                                   jira_key=jira_key)
 
                 # normal flow - returns another celery task to send the email
-                return send_gmail_message.apply_async(
-                    ('ilya.konovalov@junehomes.com',
-                     [suggested_email],
-                     ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
-                     'Access to Amazon Connect call center',
-                     final_draft,
-                     round(unix_countdown_time / 3600)),
-                    queue='new_emps',
-                    countdown=round(unix_countdown_time + 120))
+                # return send_gmail_message.apply_async(
+                #     ('ilya.konovalov@junehomes.com',
+                #      [suggested_email],
+                #      ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
+                #      'Access to Amazon Connect call center',
+                #      final_draft,
+                #      round(unix_countdown_time / 3600)),
+                #     queue='new_emps',
+                #     countdown=round(unix_countdown_time + 120))
 
         else:
             print("Iteration: ", i)
@@ -174,6 +176,43 @@ def create_amazon_user(suggested_email,
                           f'*{user_email_analogy}* from user example doesn\'t exist!\n',
                           jira_key=jira_key)
         return
+
+
+@celery_app.task
+def check_role_permissions(position_title, jira_key):
+
+    send_jira_comment(f'*Celery task* to check permissions of *"{position_title}"* is added.\n'
+                      'Please, wait...', jira_key)
+
+    permissions_for_persona_list = notion_search_for_role(position_title, jira_key=jira_key)  # the list of page_ids
+    if not permissions_for_persona_list:
+        print(f'Permissions are not added for {position_title}!')
+        send_jira_comment(f'Permissions are not added for *{position_title}* position ❌', jira_key=jira_key)
+        return  # ⚠️ ⚠️ ⚠️stops the main flow!
+    else:
+        # trying to create a directory for this role:
+        path = os.path.join(f".\\roles_configs\\{jira_key}", position_title)
+        mode = 0o666
+        os.makedirs(path, mode)
+        pages_list = ''
+        for i in range(len(permissions_for_persona_list)):
+            print(f"Reviewing {i + 1} / {len(permissions_for_persona_list)} permissions...for ({get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']})")
+            try:
+                result = notion_search_for_permission_block_children(permissions_for_persona_list[i]['id'])
+
+                if type(result) == tuple:  # because the correct variant should contain "True" i.e. - (result,True)
+                    pages_list += f"[{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']}|" \
+                                  f"{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['url']}]: Validated, Good Job! ✅ \n"
+                    with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']}.json", 'w+') as file:
+                        file.write(str(json.dumps(result[0])))
+                else:
+                    pages_list += f"[{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']}|" \
+                                  f"{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['url']}]: *{result}*\n"
+            except Exception as e:
+                print(e)
+        # print(pages_list)
+        send_jira_comment(message=f"The summary after reviewing permissions for {position_title} persona:\n{pages_list}", jira_key=jira_key)
+
 
 
 # revoke tasks  https://docs.celeryq.dev/en/stable/userguide/workers.html#revoke-revoking-tasks
