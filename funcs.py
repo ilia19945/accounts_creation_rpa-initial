@@ -310,7 +310,7 @@ def juneos_devprod_authorization(dev_or_prod):
         #        response.cookies['sessionid'], \
         #        response.json()['token']
         return response
-    except:
+    except Exception as e:
         fl.error(f'Status code:{response.status_code}\n'
                  f'{response.json()}')
         return response
@@ -546,6 +546,19 @@ def create_elk_user(firstname, lastname, suggested_email, role, dev_or_prod):
     return response, password
 
 
+def request_child_roles(role_id):
+    url = f"https://api.notion.com/v1/pages/{role_id}"
+
+    payload = ""
+    headers = {
+        'Notion-Version': '2022-02-22',
+        'Authorization': notion_secret
+    }
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+    return response
+
+
 # position_title = "Chief People Officer"
 
 
@@ -576,15 +589,104 @@ def notion_search_for_role(position_title, jira_key):
         send_jira_comment(f'the value "*{position_title}*" does not exist in column "Role/Persona name" ❌', jira_key=jira_key)
         return False
 
-    elif len(response.json()['results']) == 1:
+    elif len(response.json()['results']) == 1:  # there is only one role
         print('The role found')
+        role_name = response.json()['results'][0]['properties']['Role/Persona name']['title'][0]['plain_text']
+        role_url = response.json()['results'][0]['url']
         permissions_for_persona = response.json()['results'][0]['properties']['Permissions for persona']['relation']
-        # print(len(permissions_for_persona))
-        # print(permissions_for_persona)
-        if len(response.json()['results']) == 0:
+        # print("permissions_for_persona:")
+        print(len(permissions_for_persona))  # 19 пермиссий для одной роли
+        # print()
+
+        child_roles_ids = response.json()['results'][0]['properties']['Is parent to:']['relation']
+        print("child_roles_ids: ", len(child_roles_ids))  # сколько чайлд ролей
+
+        roles_tree = f'[{role_name}|{role_url}]'  # чтобы увидеть наглядно дерево ролей
+        a = '----'
+        i = 0
+        while True:
+            i += 1
+            # print(roles_tree)
+
+            print("child_roles_ids list:", child_roles_ids)  # чайлд роли
+
+            if len(child_roles_ids) == 0:  # if there are no child roles
+                print('No child roles detected')
+                break
+            elif len(child_roles_ids) > 1:
+                print('TECH RESTRICTION! can\'t be more than 1 child role!')
+                break
+
+            else:
+
+                # pprint(request_child_roles(role_id=child_roles_ids[0]['id']).json())
+
+                child_role_name = get_notion_page_title(child_roles_ids[0]['id']).json()['properties']['Role/Persona name']['title'][0]['plain_text']
+                child_role_url = get_notion_page_title(child_roles_ids[0]['id']).json()['url']
+
+                roles_tree += "\n" + a * i + f"{child_role_name} [{child_role_url}]"
+                print('There are linked child roles!')
+                set_of_permissions_by_each_child = []  # создаем список содержащий списки пермиссий для каждого чайлда
+
+                for role in range(len(child_roles_ids)):
+                    # role_id = response.json()['results'][0]['properties']['Is parent to:']['relation'][role]['id']
+
+                    role_id = child_roles_ids[role]['id']
+                    # print(role_id)
+
+                    # берем список пермиссий для этой роли
+                    permissions_for_each_child = request_child_roles(role_id=role_id).json()['properties']['Permissions for persona']['relation']
+                    # list_permissions_for_each_child = []
+
+                    # for permission in range(len(permissions_for_each_child)):  # ищем все пермиссии для роли
+                    #     # append permissions to list of permissions for this child role
+                    #     list_permissions_for_each_child.append(permissions_for_each_child[permission]['id'])  # [1,2] список пермиссий для каждой из чайлд ролей
+                    #     # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+
+                    # append set of permissions to set of children permissions
+                    # set_of_permissions_by_each_child.append(list_permissions_for_each_child)  # пермиссии каждой чайлд роли аппендим в общий список
+                    set_of_permissions_by_each_child.append(permissions_for_each_child)  # пермиссии каждой чайлд роли аппендим в общий список
+
+                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ построили пермиссии для текущего уровня")
+                print(f'Permission set for role is built: ', set_of_permissions_by_each_child)  # теперь есть сет из сетов пермиссий для всех ролей в списке
+                permissions_for_persona.append(set_of_permissions_by_each_child)  # зааппендили в общий лист
+                print("After append to general list: ", len(permissions_for_persona))
+                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ построили пермиссии для текущего уровня")
+
+                # для каждой чайлд роли проверяем, есть ли и у нее чайлд роль
+                for j in range(len(child_roles_ids)):
+                    child_roles_id = request_child_roles(role_id=child_roles_ids[j]['id'])
+                    role_name = child_roles_id.json()['properties']['Role/Persona name']['title'][0]['plain_text']
+                    # pprint(child_roles_id.json()['properties']['Is parent to:']['relation'])
+                    # pprint(role_name)
+                    print("Number of child roles:", len(child_roles_id.json()['properties']['Is parent to:']['relation']), "of role -", role_name)
+                    print("xxxxxxxxxxxxxxxxxxxxxxxxx")
+
+                # обнуляем список
+                child_roles_ids = []
+
+                # аппендим в него найденную чайлд роль, если она есть
+                if len(child_roles_id.json()['properties']['Is parent to:']['relation']) > 0:
+                    child_roles_ids.append(*child_roles_id.json()['properties']['Is parent to:']['relation'])
+
+                else:
+                    break
+                print("child_roles_ids of roles was recreated and appended: ", child_roles_ids)
+
+            print()
+            print()
+            print()
+
+        print("roles_tree:")
+        print(roles_tree)
+        print('Complete set of permissions:')
+        pprint(permissions_for_persona, depth=4, indent=1)
+        print('=============================================')
+
+        if len(response.json()['results']) == 0:  # no permissions are linked to this role!
             return permissions_for_persona
 
-        else:
+        else:  # correct flow there are linked  permissions to this role!
             # pprint(permissions_for_persona, indent=1)  # list
             return permissions_for_persona
 
@@ -613,29 +715,31 @@ def notion_search_for_permission_block_children(block_id):
 
     response = requests.request("GET", url, headers=headers, data=payload)
 
-    check_permissions = False
-
     for i in range(len(response.json()['results'])):  # for every block on the page
+        # print('inside func, len:', i + 1, "/", len(response.json()['results']))
+
         # pprint(response.json()['results'][i], indent=1)
         if 'code' in response.json()['results'][i]:
             print('code block found on the page!')
             permissions = response.json()['results'][i]['code']['rich_text'][0]['text']['content']
+            # print("permissions:")
+            # print(permissions)
             try:
-                print('Parsing...')
+                # print('Parsing...')
                 permissions_dict = json.loads(permissions)
-                print('Permissions are parsed!')
-                check_permissions = True
+                # print('Permissions are parsed')
+                # check_permissions = True
+                return dict(permissions_dict), True  # tuple
 
             except Exception as e:
-                return f"validation failed. JSON Error: {e} ⚠️"
+                print('Permissions are NOT parsed')
+                return f"*Validation failed. JSON Error: {e}* ⚠️"
 
         else:
+            # print(f'not a code block: {response.json()["results"][i]}')
             pass
 
-    if check_permissions:
-        return dict(permissions_dict), True
-    else:
-        return 'Please add JSON block to the body page ⚠️'
+    return '*Please add JSON block to the body page* ⚠️'
 
 
 def get_notion_page_title(page_id):
@@ -666,7 +770,7 @@ def fetching_params_from_file(filename_contains: str, jsonvalue: str, jira_key: 
                             organizational_unit = organizational_unit[jsonvalue]
                             return organizational_unit
                         else:
-                            print('Org unit is not found')
+                            print('Organizational unit is not found')
                             # return None
                     except Exception as e:
                         print(f"Error: {e}")
@@ -677,3 +781,180 @@ def fetching_params_from_file(filename_contains: str, jsonvalue: str, jira_key: 
         else:
             print(f'"{item}" - is not a file')
             # return None
+
+
+def checking_config_for_service_existence(role_title, jira_key):
+    directory = f".\\roles_configs\\{jira_key}\\{role_title}"
+    items_list = []
+    # print(directory)
+    for item in os.listdir(directory):
+        # print(os.listdir(directory))
+        # print(item)
+
+        if os.path.isfile(os.path.join(directory, item)):  # creating a list of files in the directory
+            items_list.append(item)
+
+        else:
+            print(f'"{item}" - is not a file')
+    return items_list
+
+
+
+
+
+def compare_permissions_by_name(permissions_set,  # might be current_permissions_set[0] / antecedent_permissions_set[0]
+                                pages_list,
+                                iterator,
+                                level,
+                                **compare_by_name_permission_for_l2
+                                ):
+    permission_id = permissions_set[0][iterator]['id']
+    permission_name = get_notion_page_title(permission_id).json()['properties']['Name']['title'][0]['plain_text']
+    permission_url = get_notion_page_title(permission_id).json()['url']
+
+    # print('current_role_name:', current_role_name)
+    # print('current_role_url:', current_role_url)
+    # print('current_permission_id:', current_permission_id)
+
+    # print('got INTO of notion_search_for_permission_block_children')
+    if level == 2:
+        # print('-----------------')
+        # print('it\'s level 2')
+        # print('role_name: ', role_name)  # full_role_name
+        service = compare_by_name_permission_for_l2['compare_by_name_permission_for_l2']
+        # print('service: ', service)  # слово
+        # print()
+        # print()
+
+        if re.findall(service, permission_name):
+            print(permission_name, '-', compare_by_name_permission_for_l2['compare_by_name_permission_for_l2'], 'they match!')
+        else:
+            json_object = 'incomparable_service'
+            print(permission_name, '-', compare_by_name_permission_for_l2['compare_by_name_permission_for_l2'], 'they don\'t match')
+            return pages_list, permission_name, json_object
+
+    result = notion_search_for_permission_block_children(permission_id)  # запрашиваем есть ли json
+
+    print('level - ', level)
+
+    if level == 1:  # это сравнение пермиссий current level
+        if type(result) == tuple:
+            json_object = result[0]  # это уже пермиcсии сами если все ок
+            pages_list += f"*[{permission_name}|{permission_url}]* : Validated. ✅\n"
+
+        else:
+            json_object = False  # это уже это если валидация не прошла
+            pages_list += f"*[{permission_name}|{permission_url}]*: {result}\n"
+        # print('current_result')
+        # print(current_result)
+        # print('==============')
+    elif level == 2:  # 2
+
+        if type(result) == tuple:
+            json_object = result[0]  # это уже пермиcсии, если все ок
+
+            pages_list += f"+––>*[{permission_name}|{permission_url}]*: Validated. ✅\n"
+
+        else:
+            json_object = False  # это уже это если валидация не прошла
+            pages_list += f"+––>*[{permission_name}|{permission_url}]*: {result}\n"
+
+    return pages_list, permission_name, json_object
+
+
+def compare_role_configs_google(current_json_object, antecedent_json_object ):
+    for c_index, (c_key, c_value) in enumerate(current_json_object.items()):
+        # print(c_index, c_key, c_value)
+        # print(current_json_object[c_key])
+        for a_index, (a_key, a_value) in enumerate(antecedent_json_object.items()):
+            if c_key == a_key:
+                if a_value == c_value:  # equal values
+                    pass
+                else:  # values are different / c_value needs to be updated
+                    if type(c_value) == list:
+                        for i in range(len(a_value)):
+                            if a_value[i].strip() not in c_value:
+                                c_value.append(a_value[i].strip())
+
+                        print(c_value)
+                    elif type(c_value) == str:
+                        c_value = a_value
+                    else:
+                        print(f'A different value type is received: '
+                              f'{c_value} - {type(c_value)}')
+    return current_json_object
+
+
+def compare_role_configs_amazonconnect():
+    print('сравнили конфиги в амазоне :)')
+
+
+def compare_role_configs_slack():
+    print('сравнили конфиги в slack :)')
+
+
+def compare_role_configs_juneos():
+    print('сравнили конфиги в juneos :)')
+
+
+def compare_role_configs_frontapp():
+    print('сравнили конфиги в frontapp :)')
+
+
+def full_compare_by_name_and_permissions_with_file(config_name: str,  # googleworkspace, amazonconnect,juneos,etc
+                                                   antecedent_permissions_set,
+                                                   jira_key,
+                                                   position_title,
+                                                   current_json_object,
+                                                   pages_list,
+                                                   current_role_name):
+    for r in range(len(antecedent_permissions_set[0])):  # берем каждую пермиссию из n-1 уровня
+        # получаем результат проверки для коммента, n-1 название роли и json конфиг
+        pages_list, antecedent_role_name, antecedent_json_object = compare_permissions_by_name(permissions_set=antecedent_permissions_set,
+                                                                                               pages_list=pages_list,
+                                                                                               iterator=r,
+                                                                                               level=2,
+                                                                                               compare_by_name_permission_for_l2=config_name)
+        if not antecedent_json_object:  # writing down only the current result. Skipping antecedent_json_object because it's invalid.
+            print('there is an error in the document', antecedent_json_object)
+            pages_list += "–––––––– ⬆️Permission is skipped during building *Permissions Tree*! Fix the error, otherwise the permissions tree may not be complete.\n"
+            relevant_config = antecedent_json_object
+
+            with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
+                # file.write(str(relevant_config))
+                json.dump(relevant_config, file, indent=4)
+
+        elif antecedent_json_object == "incomparable_service":  # когда сервис для сравниваемой пермиссии отличается - скипаем.
+            print(f'The permission - "{antecedent_role_name}" cannot be compared with  service - "{config_name}", skipping ...')
+            pass
+        else:
+            if re.findall(config_name, antecedent_role_name):  # internal config of antecedent_role
+                if config_name == 'googleworkspace':
+                    # comparing current role json object vs. antecedent role json object for googleworkspace
+                    relevant_config = compare_role_configs_google(current_json_object, antecedent_json_object)
+                    with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
+                        # file.write(str(relevant_config))
+                        json.dump(relevant_config, file, indent=4)
+
+                elif config_name == 'amazonconnect':
+                    relevant_config = compare_role_configs_amazonconnect()
+
+                elif config_name == 'juneos':
+                    relevant_config = compare_role_configs_juneos()
+
+                elif config_name == 'frontapp':
+                    relevant_config = compare_role_configs_frontapp()
+
+                elif config_name == 'slack':
+                    relevant_config = compare_role_configs_slack()
+                    pass
+                else:
+                    relevant_config = f'received permissions for: {config_name}'
+                    print(f'received permissions for: {config_name}')
+            else:
+                relevant_config = f'else: {antecedent_role_name}'
+                print('else:', antecedent_role_name)
+                pass
+
+        # print('--------INNER-ITER--------')
+    return relevant_config, pages_list

@@ -657,7 +657,9 @@ if __name__ == 'mainfastapi':
                         "Sales regular user": "tea_14r7o",
                         "Team member": "tea_14rd0",
                         "Success team lead": "tea_14res",
-                        "Nutiliti Tiger Team": "tea_15c1w"
+                        "Nutiliti Tiger Team": "tea_15c1w",
+                        "Support Nightshift Agent": "tea_17guc",
+                        "Support Onboarding Agent": "tea_17h1g"
                     }
                     frontapp_role = roles_dict[frontapp_role]
 
