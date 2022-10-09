@@ -790,22 +790,19 @@ def checking_config_for_service_existence(role_title, jira_key):
     for item in os.listdir(directory):
         # print(os.listdir(directory))
         # print(item)
-
         if os.path.isfile(os.path.join(directory, item)):  # creating a list of files in the directory
             items_list.append(item)
-
         else:
             print(f'"{item}" - is not a file')
     return items_list
-
-
-
 
 
 def compare_permissions_by_name(permissions_set,  # might be current_permissions_set[0] / antecedent_permissions_set[0]
                                 pages_list,
                                 iterator,
                                 level,
+                                jira_key,
+                                position_title,
                                 **compare_by_name_permission_for_l2
                                 ):
     permission_id = permissions_set[0][iterator]['id']
@@ -818,13 +815,8 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
 
     # print('got INTO of notion_search_for_permission_block_children')
     if level == 2:
-        # print('-----------------')
-        # print('it\'s level 2')
-        # print('role_name: ', role_name)  # full_role_name
         service = compare_by_name_permission_for_l2['compare_by_name_permission_for_l2']
         # print('service: ', service)  # слово
-        # print()
-        # print()
 
         if re.findall(service, permission_name):
             print(permission_name, '-', compare_by_name_permission_for_l2['compare_by_name_permission_for_l2'], 'they match!')
@@ -833,7 +825,25 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
             print(permission_name, '-', compare_by_name_permission_for_l2['compare_by_name_permission_for_l2'], 'they don\'t match')
             return pages_list, permission_name, json_object
 
-    result = notion_search_for_permission_block_children(permission_id)  # запрашиваем есть ли json
+    result = notion_search_for_permission_block_children(permission_id)  # запрашиваем есть ли валидный json
+
+    print('notion_search_for_permission_block_children(permission_id): ')
+    print(result)
+
+    try:
+        with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{compare_by_name_permission_for_l2['compare_by_name_permission_for_l2']}_config.json", 'r') as file:
+            result = json.loads(file.read())
+            # print()
+            # print('========')
+            # print('tried to open the file:')
+            # pprint(result)
+            # print(type(result))
+            # print('========')
+            # print()
+
+    except Exception as e:
+        print("Exception during opening the file:")
+        print(e)
 
     print('level - ', level)
 
@@ -842,27 +852,33 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
             json_object = result[0]  # это уже пермиcсии сами если все ок
             pages_list += f"*[{permission_name}|{permission_url}]* : Validated. ✅\n"
 
+        elif type(result) == dict:
+            json_object = result
+            pages_list += f"+––> *[{permission_name}|{permission_url}]*: Inherited from the config on the disk. ✅\n"
+
         else:
             json_object = False  # это уже это если валидация не прошла
             pages_list += f"*[{permission_name}|{permission_url}]*: {result}\n"
-        # print('current_result')
-        # print(current_result)
-        # print('==============')
-    elif level == 2:  # 2
+
+    elif level == 2:
 
         if type(result) == tuple:
             json_object = result[0]  # это уже пермиcсии, если все ок
 
-            pages_list += f"+––>*[{permission_name}|{permission_url}]*: Validated. ✅\n"
+            pages_list += f"+––> *[{permission_name}|{permission_url}]*: Validated. ✅\n"
+
+        elif type(result) == dict:
+            json_object = result
+            pages_list += f"+––> *[{permission_name}|{permission_url}]*: Inherited from the config on the disk. ✅\n"
 
         else:
             json_object = False  # это уже это если валидация не прошла
-            pages_list += f"+––>*[{permission_name}|{permission_url}]*: {result}\n"
+            pages_list += f"+––> *[{permission_name}|{permission_url}]*: {result}\n"
 
     return pages_list, permission_name, json_object
 
 
-def compare_role_configs_google(current_json_object, antecedent_json_object ):
+def compare_role_configs_google(current_json_object, antecedent_json_object):
     for c_index, (c_key, c_value) in enumerate(current_json_object.items()):
         # print(c_index, c_key, c_value)
         # print(current_json_object[c_key])
@@ -876,6 +892,7 @@ def compare_role_configs_google(current_json_object, antecedent_json_object ):
                             if a_value[i].strip() not in c_value:
                                 c_value.append(a_value[i].strip())
 
+                        print('c_value:')
                         print(c_value)
                     elif type(c_value) == str:
                         c_value = a_value
@@ -908,18 +925,34 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
                                                    current_json_object,
                                                    pages_list,
                                                    current_role_name):
+    print()
+    print('current_role_name:')
+    print(current_role_name)
+    print('config_name:')
+    print(config_name)
+    print('current_json_object:')
+    print(current_json_object)
+    print()
+
     for r in range(len(antecedent_permissions_set[0])):  # берем каждую пермиссию из n-1 уровня
         # получаем результат проверки для коммента, n-1 название роли и json конфиг
         pages_list, antecedent_role_name, antecedent_json_object = compare_permissions_by_name(permissions_set=antecedent_permissions_set,
                                                                                                pages_list=pages_list,
                                                                                                iterator=r,
                                                                                                level=2,
-                                                                                               compare_by_name_permission_for_l2=config_name)
-        if not antecedent_json_object:  # writing down only the current result. Skipping antecedent_json_object because it's invalid.
-            print('there is an error in the document', antecedent_json_object)
-            pages_list += "–––––––– ⬆️Permission is skipped during building *Permissions Tree*! Fix the error, otherwise the permissions tree may not be complete.\n"
-            relevant_config = antecedent_json_object
+                                                                                               compare_by_name_permission_for_l2=config_name,
+                                                                                               jira_key=jira_key,
+                                                                                               position_title=position_title)
 
+        print('this is antecedent_json_object:', antecedent_json_object)
+        print('this is current_json_object:', current_json_object)
+        if not antecedent_json_object:  # writing down only the current result. Skipping antecedent_json_object because it's invalid.
+            print('there is an error in the document')
+
+            pages_list += "–––––––– ⬆️Permission is skipped during building *Permissions Tree*! Fix the error, otherwise the permissions tree may not be complete.\n"
+            relevant_config = current_json_object
+
+            # запись в файл
             with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
                 # file.write(str(relevant_config))
                 json.dump(relevant_config, file, indent=4)
@@ -927,14 +960,27 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
         elif antecedent_json_object == "incomparable_service":  # когда сервис для сравниваемой пермиссии отличается - скипаем.
             print(f'The permission - "{antecedent_role_name}" cannot be compared with  service - "{config_name}", skipping ...')
             pass
+
         else:
+            print('antecedent_role_name is correct')
             if re.findall(config_name, antecedent_role_name):  # internal config of antecedent_role
                 if config_name == 'googleworkspace':
+                    print(f"сравниваем '{config_name}' и '{antecedent_role_name}'")
                     # comparing current role json object vs. antecedent role json object for googleworkspace
                     relevant_config = compare_role_configs_google(current_json_object, antecedent_json_object)
-                    with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
-                        # file.write(str(relevant_config))
-                        json.dump(relevant_config, file, indent=4)
+                    print()
+                    print('=============this is relevant config')
+                    print(relevant_config)
+                    print('=============')
+                    print()
+
+                    if relevant_config:
+                        with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
+                            # file.write(str(relevant_config)) # более корректная запись
+                            json.dump(relevant_config, file, indent=4)
+                    else:
+                        print('relevant config: ', relevant_config)
+                        pass
 
                 elif config_name == 'amazonconnect':
                     relevant_config = compare_role_configs_amazonconnect()
@@ -958,3 +1004,46 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
 
         # print('--------INNER-ITER--------')
     return relevant_config, pages_list
+
+
+def comparing_permission_from_notion_vs_config_on_disk(filename,
+                                                       permission_config,
+                                                       pages_list,
+                                                       permission_name,
+                                                       permission_url,
+                                                       service_name
+                                                       ):
+    validation_result = ''
+    try:
+        with open(filename, 'r') as file:
+            data_file_config = json.loads(file.read())
+            print("data_file_config:", data_file_config)
+            # print("data_file_config type:", type(data_file_config))
+
+    except Exception as e:
+        # если не смог прочитать конфиг, то просто перезаписываем и в jira комменте отписываемся что скипнули
+
+        print("couldn't read, error:", e)
+        with open(filename, 'w+') as file:
+            json.dump(permission_config[0], file, indent=4)
+    else:
+        # если смог прочитать, то пытаемся сравнить по сервисам
+        if service_name == 'googleworkspace':
+            relevant_config = compare_role_configs_google(data_file_config, permission_config[0])
+            print('relevant_config:')
+            print("сonfigs compared ✅")
+            print("====================")
+            with open(filename, 'w+') as file:
+                json.dump(relevant_config, file, indent=4)
+
+        elif service_name == 'juneos':
+            with open(filename, 'w+') as file:
+                # json.dump('{"test": 1}', file, indent=4)
+                json.dump(permission_config[0], file, indent=4)
+        else:  # пока просто перезаписываем
+            with open(filename, 'w+') as file:
+                json.dump(permission_config[0], file, indent=4)
+            print("успешно перезаписали", filename)
+        validation_result += f"*[{permission_name}|{permission_url}]* : Validated. ✅\n"
+
+    return validation_result

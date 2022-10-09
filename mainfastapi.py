@@ -198,9 +198,9 @@ if __name__ == 'mainfastapi':
             user_email_analogy = jira_description[jira_description.index('*If needs access to the telephony system, describe details (e.g. permissions and settings like which existing user?)*') + 1]
 
             if organizational_unit in ['Technology', 'Brand Marketing']:
-                unix_hire_start_date += 14400  # 28800 - for Moscow, 14400 for EDT
+                unix_hire_start_date += 7200  # 28800 - for Moscow, 14400 for EDT; updated to 2h earlier
             else:
-                unix_hire_start_date += 32400  # 46800 - for Moscow, 32400 for EDT
+                unix_hire_start_date += 25200  # 46800 - for Moscow, 32400 for EDT; updated to 2h earlier
 
             fl.info(f"The type of the date is now {str(unix_hire_start_date)}")
             unix_countdown_time = unix_hire_start_date - round(time.time())
@@ -659,7 +659,10 @@ if __name__ == 'mainfastapi':
                         "Success team lead": "tea_14res",
                         "Nutiliti Tiger Team": "tea_15c1w",
                         "Support Nightshift Agent": "tea_17guc",
-                        "Support Onboarding Agent": "tea_17h1g"
+                        "Support Onboarding Agent": "tea_17h1g",
+                        "Resolutions Team Agent": "tea_17upw",
+                        "Support Team Leader": "tea_17utg",
+                        "Landlord Team Agent": "tea_17uv8"
                     }
                     frontapp_role = roles_dict[frontapp_role]
 
