@@ -3,14 +3,14 @@ import os.path
 import random
 import shutil
 import string
-
+from config import email_cc_list, countdown_for_it_content, countdown_for_others_depts, roles_dict
 import requests
 import re
 import time
 from datetime import datetime
 import funcs as f
 import fast_api_logging as fl
-from tasks import send_gmail_message, create_amazon_user, check_role_permissions
+from tasks import send_gmail_message, create_amazon_user, check_role_permissions, new_check_role_and_permissions
 
 from fastapi import Body, FastAPI, HTTPException, Query, BackgroundTasks
 from typing import Optional
@@ -104,7 +104,7 @@ if __name__ == 'mainfastapi':
 
 
     @app.post("/webhook", status_code=200)  # Jira webhook, tag "employee/contractor hiring"
-    async def main_flow(background_tasks: BackgroundTasks, body: dict = Body(...)):
+    async def main_flow(body: dict = Body(...)):
         global jira_key
         jira_key = body['issue']['key']
 
@@ -198,10 +198,9 @@ if __name__ == 'mainfastapi':
             user_email_analogy = jira_description[jira_description.index('*If needs access to the telephony system, describe details (e.g. permissions and settings like which existing user?)*') + 1]
 
             if organizational_unit in ['Technology', 'Brand Marketing']:
-                unix_hire_start_date += 7200  # 28800 - for Moscow, 14400 for EDT; updated to 2h earlier
+                unix_hire_start_date += countdown_for_it_content
             else:
-                unix_hire_start_date += 25200  # 46800 - for Moscow, 32400 for EDT; updated to 2h earlier
-
+                unix_hire_start_date += countdown_for_others_depts
             fl.info(f"The type of the date is now {str(unix_hire_start_date)}")
             unix_countdown_time = unix_hire_start_date - round(time.time())
             if unix_countdown_time <= 0:
@@ -319,7 +318,7 @@ if __name__ == 'mainfastapi':
                         f.refresh_token_func()
                         f.send_jira_comment("Current access_token expired. It was automatically refreshed. "
                                             "Please try to create google account for the user again.\n"
-                                            "(Switch the ticket status -> \"In Progress\" -> \" Create a Google account\")", jira_key) #ch
+                                            "(Switch the ticket status -> \"In Progress\" -> \" Create a Google account\")", jira_key)
 
                 # if there is a valid (< 1h token)
                 else:
@@ -491,7 +490,7 @@ if __name__ == 'mainfastapi':
                                         send_gmail_message.apply_async(
                                             ('ilya.konovalov@junehomes.com',
                                              [personal_email],
-                                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com', supervisor_email],
+                                             email_cc_list + [supervisor_email],
                                              'Your Kibana.Development credentials.',
                                              final_draft,
                                              round(unix_countdown_time / 3600)),
@@ -534,7 +533,7 @@ if __name__ == 'mainfastapi':
                                         send_gmail_message.apply_async(
                                             ('ilya.konovalov@junehomes.com',
                                              [personal_email],
-                                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com', supervisor_email],
+                                             email_cc_list + [supervisor_email],
                                              'Your Kibana.Production credentials.',
                                              final_draft,
                                              round(unix_countdown_time / 3600)),
@@ -568,7 +567,7 @@ if __name__ == 'mainfastapi':
                             # send_gmail_message.apply_async(
                             #     ('ilya.konovalov@junehomes.com',
                             #      [personal_email],
-                            #      ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com', supervisor_email],
+                            #      email_cc_list + [supervisor_email],
                             #      'June Homes: corporate email account',
                             #      final_draft,
                             #      round(unix_countdown_time / 3600)),
@@ -653,17 +652,6 @@ if __name__ == 'mainfastapi':
                     # BASED ON THE OLD DESCRIPTION
                     frontapp_role = jira_description[jira_description.index('*If needs FrontApp, select a user role*') + 1]
                     # new roles should be added to the dict in future
-                    roles_dict = {
-                        "Sales regular user": "tea_14r7o",
-                        "Team member": "tea_14rd0",
-                        "Success team lead": "tea_14res",
-                        "Nutiliti Tiger Team": "tea_15c1w",
-                        "Support Nightshift Agent": "tea_17guc",
-                        "Support Onboarding Agent": "tea_17h1g",
-                        "Resolutions Team Agent": "tea_17upw",
-                        "Support Team Leader": "tea_17utg",
-                        "Landlord Team Agent": "tea_17uv8"
-                    }
                     frontapp_role = roles_dict[frontapp_role]
 
                 fl.info(f"Frontapp role: {frontapp_role}")
@@ -753,18 +741,6 @@ if __name__ == 'mainfastapi':
                     '''Группы добавлять вручную в json файле'''
                     '''Для Technology всегда ставится галка супер юзер вручную'''
 
-                    # не актуально пока не будет добавлена проверка роли
-                    # try:
-                    #     groups = f.get_juneos_groups_from_position_title(file_name='groups_technology.json')[position_title]
-                    # except Exception as error:
-                    #     fl.info(error)
-                    #     f.send_jira_comment(f'An error occurred while trying to search a user position:\n'
-                    #                         f'*{error}* for *{organizational_unit}*.\n'
-                    #                         f'Check if position exists in /permissions_by_orgunits/*groups_technology.json*'
-                    #                         f' in and update json. Then try again.',
-                    #                         jira_key=jira_key)
-                    #     return KeyError(error)
-
                     juneos_user = f.create_juneos_user(first_name=first_name,
                                                        last_name=last_name,
                                                        suggested_email=suggested_email,
@@ -791,7 +767,7 @@ if __name__ == 'mainfastapi':
                             (
                                 'ilya.konovalov@junehomes.com',
                                 [suggested_email],
-                                ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
+                                email_cc_list,
                                 'Access to JuneOS.Development property management system',
                                 final_draft,
                                 round(unix_countdown_time / 3600)
@@ -827,7 +803,7 @@ if __name__ == 'mainfastapi':
                     except Exception as e:
                         print(f"Error: {e}")
                         # BASED ON THE OLD DESCRIPTION
-
+                    else:
                         try:
                             groups = f.get_juneos_groups_from_position_title(file_name='groups_sales.json')[position_title]
                             fl.info(f"the group was found! \n{str(groups)}")
@@ -860,7 +836,7 @@ if __name__ == 'mainfastapi':
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
                              [suggested_email],
-                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
+                             email_cc_list,
                              'Access to JuneOS property management system',
                              final_draft,
                              round(unix_countdown_time / 3600)
@@ -986,7 +962,7 @@ if __name__ == 'mainfastapi':
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
                              [suggested_email],
-                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
+                             email_cc_list,
                              'Access to JuneOS property management system',
                              final_draft,
                              round(unix_countdown_time / 3600)
@@ -1100,7 +1076,7 @@ if __name__ == 'mainfastapi':
                         send_gmail_message.apply_async(
                             ('ilya.konovalov@junehomes.com',
                              [suggested_email],
-                             ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
+                             email_cc_list,
                              'Access to JuneOS property management system',
                              final_draft,
                              round(unix_countdown_time / 3600)
@@ -1192,24 +1168,26 @@ if __name__ == 'mainfastapi':
 
             elif jira_new_status == "Check Role and Permissions":
                 """Checking for filling out RoR table"""
-                check_role_permissions.apply_async(
+                new_check_role_and_permissions.apply_async(
                     (position_title,
                      jira_key),
                     queue='other')
-                pass
 
             elif jira_new_status in ["Done", "Rejected"]:
-                path = os.path.join(f".\\roles_configs", jira_key)
-                if os.path.exists(path) and os.path.isdir(path):
-                    shutil.rmtree(path)
-                pass
+                try:
+                    path = os.path.join(f".\\roles_configs", jira_key)
+                    if os.path.exists(path) and os.path.isdir(path):
+                        shutil.rmtree(path)
+                except Exception as e:
+                    print("Exception:", e)
+
             else:
                 fl.info('Got a status change different from what triggers the user account creation.')
 
         else:
             fl.info(f"The field \"{detect_change_type}\" was changed to: \"{detect_action}\". \n"
                     "Nothing will be done. Awaiting for the other request")
-            pass
+
 
 
     @app.post("/maintenance_hiring", status_code=200)  # Jira webhook, tag "maintenance employee hiring"
@@ -1293,7 +1271,7 @@ if __name__ == 'mainfastapi':
                     send_gmail_message.apply_async(
                         ('ilya.konovalov@junehomes.com',
                          [personal_email],
-                         ['idelia@junehomes.com', 'ivan@junehomes.com', 'artyom@junehomes.com', 'maria.zhuravleva@junehomes.com'],
+                         email_cc_list,
                          'Access to JuneOS property management system',
                          final_draft,
                          round(unix_countdown_time / 3600)
@@ -1393,14 +1371,21 @@ if __name__ == 'mainfastapi':
                 else:
                     fl.error('An error occurred while creating a JuneOS user.\n'
                              f'Error code: *{juneos_user.status_code}* \n\n'
-                             f'*{juneos_user.json()["user"]}*')
+                             f'*{juneos_user.json()["errors"]}*')
                     f.send_jira_comment('An error occurred while creating a JuneOS user.\n'
                                         f'Error code: *{juneos_user.status_code}* \n\n'
-                                        f'*{juneos_user.json()["user"]}*',
+                                        f'*{juneos_user.json()["errors"]}*',
                                         jira_key=jira_key)
 
+            elif jira_new_status == "Check Role and Permissions":
+                """Checking for filling out RoR table"""
+                check_role_permissions.apply_async(
+                    (position_title,
+                     jira_key),
+                    queue='other')
+
             elif jira_new_status not in ["To Do", "Done", "In Progress", "Rejected", "Waiting for dev", "Waiting for reply"]:
-                f.send_jira_comment('*Creating a JuneOS account* is the only available for the maintenance employees.',
+                f.send_jira_comment('*Creating a JuneOS account* is the only available status for the maintenance employees.',
                                     jira_key=jira_key)
             else:
                 pass

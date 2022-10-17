@@ -1,13 +1,14 @@
 import json
 import re
 import time
+
+import boto3
 import requests
 import string
 import random
 import os
 from email.mime.text import MIMEText
 import base64
-import boto3
 from pprint import pprint
 import fast_api_logging as fl
 
