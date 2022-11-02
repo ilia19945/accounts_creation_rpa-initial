@@ -10,9 +10,9 @@ import time
 from datetime import datetime
 import funcs as f
 import fast_api_logging as fl
-from tasks import send_gmail_message, create_amazon_user, check_role_permissions, new_check_role_and_permissions
+from tasks import send_gmail_message, create_amazon_user, check_role_permissions, new_check_role_and_permissions, async_google_account_license_groups_calendar_creation
 
-from fastapi import Body, FastAPI, HTTPException, Query, BackgroundTasks
+from fastapi import Body, FastAPI, HTTPException, Query
 from typing import Optional
 from jinja2 import Environment, FileSystemLoader
 
@@ -121,10 +121,31 @@ if __name__ == 'mainfastapi':
 
             # print(jira_description)
 
-            position_title = jira_description[jira_description.index('*Position title*') + 1]
-            organizational_unit = jira_description[jira_description.index('*Organizational unit*') + 1]
+            # position_title = jira_description[jira_description.index('*Position title*') + 1]
+            role_title = jira_description[jira_description.index('*Role title*') + 1]
 
-            # print(f"Org Unit: {organizational_unit}")
+            try:
+                organizational_unit = f.fetching_params_from_file(
+                    filename_contains="googleworkspace",
+                    jsonvalue='Groups',
+                    position_title=role_title,
+                    jira_key=jira_key
+                )
+                print('the value is taken from config on Notion')
+            except Exception as e:
+                f.send_jira_comment('Couldn\'t take the *Organizational unit* from *googleworkspace* file config.\n'
+                                    f'Error: [{e}]\n'
+                                    f'Trying to take the value from ticket description...', jira_key)
+                try:
+                    organizational_unit = jira_description[jira_description.index('*Organizational unit*') + 1]
+                    print('the value is taken from jira description')
+                except Exception as e:
+                    f.send_jira_comment('Couldn\'t take the *Organizational unit* from ticket description...\n'
+                                        f'Error: [{e}]\n'
+                                        f'Make sure the Org Unit exists on Google Workspace.', jira_key)
+                    return
+
+            print(f"Organizational unit: {organizational_unit}")
             first_name = jira_description[jira_description.index('*First name*') + 1]
             last_name = jira_description[jira_description.index('*Last name*') + 1]
             if organizational_unit == 'Sales':
@@ -152,47 +173,6 @@ if __name__ == 'mainfastapi':
             personal_phone = jira_description[jira_description.index('*Personal phone number (with country code)*') + 1]
             supervisor_email = jira_description[jira_description.index('*Supervisor*') + 1]
 
-            # try:
-            #     gmail_groups = f.fetching_params_from_file(
-            #         filename_contains="googleworkspace",
-            #         jsonvalue='Groups',
-            #         position_title=position_title,
-            #         jira_key=jira_key
-            #     )
-            #     # print(gmail_groups)
-            #     if gmail_groups is None:
-            #         pass
-            #     if 'team@junehomes.com' not in gmail_groups:
-            #         gmail_groups.append('team@junehomes.com')
-            # except Exception as e:
-            #     print(f"Error: {e}")
-            #     # BASED ON THE OLD DESCRIPTION
-            #     gmail_groups = jira_description[jira_description.index('*Gmail - which groups needs access to*') + 1].split(',')
-            #
-            #     gmail_groups_refined = []
-            #     for i in range(len(gmail_groups)):
-            #         gmail_groups_refined.append(gmail_groups[i].strip())
-            #     if 'team@junehomes.com' not in gmail_groups_refined:
-            #         gmail_groups_refined.append('team@junehomes.com')
-            #     gmail_groups = [i for i in gmail_groups_refined if i]  # check for empty values like after last , ''
-
-            # print(gmail_groups)
-
-            # try:
-            #     frontapp_role = f.fetching_params_from_file(
-            #         filename_contains="frontapp",
-            #         jsonvalue="teammate_template_id",
-            #         position_title=position_title,
-            #         jira_key=jira_key
-            #     )
-            #     # print(gmail_groups)
-            #
-            # except Exception as e:
-            #     print(f"Error: {e}")
-            #     # BASED ON THE OLD DESCRIPTION
-            #     frontapp_role = jira_description[jira_description.index('*If needs FrontApp, select a user role*') + 1]
-            # # print(frontapp_role)
-
             hire_start_date = jira_description[jira_description.index('*Start date (IT needs 3 WORKING days to create accounts)*') + 1]
             unix_hire_start_date = datetime.strptime(hire_start_date, '%m/%d/%Y').timestamp()  # unix by the 00:00 AM
             user_email_analogy = jira_description[jira_description.index('*If needs access to the telephony system, describe details (e.g. permissions and settings like which existing user?)*') + 1]
@@ -209,12 +189,11 @@ if __name__ == 'mainfastapi':
             fl.info(f"time for task countdown in hours: {str(unix_countdown_time / 3600)}")
 
             # detect only the specific status change
-            # creates a google account + assigns a google groups +
-            # assigns a license depending on the orgunit
+            # creates a Google account + assigns a Google Groups +
+            # assigns a license depending on the org.unit
             # + creates a main google email + sends it policies + adds them as celery tasks.
             # + creates juneosDEV user if org_unit = IT and sends email as celery task
 
-            # https://fastapi.tiangolo.com/tutorial/background-tasks/ MUST HAVE OTHERVISE IS TOO LONG TO WAIT
             if jira_new_status == "Create a google account":
                 fl.info(f"Key: {jira_key}")
                 fl.info(f"Correct event to create user Google account detected. Perform user creation attempt ...")
@@ -240,7 +219,7 @@ if __name__ == 'mainfastapi':
                     gmail_groups = f.fetching_params_from_file(
                         filename_contains="googleworkspace",
                         jsonvalue='Groups',
-                        position_title=position_title,
+                        position_title=role_title,
                         jira_key=jira_key
                     )
                     # print(gmail_groups)
@@ -265,7 +244,7 @@ if __name__ == 'mainfastapi':
                     organizational_unit = f.fetching_params_from_file(
                         filename_contains="googleworkspace",
                         jsonvalue='Organizational Unit',
-                        position_title=position_title,
+                        position_title=role_title,
                         jira_key=jira_key
                     )
                 except Exception as e:
@@ -274,17 +253,17 @@ if __name__ == 'mainfastapi':
                     organizational_unit = jira_description[jira_description.index('*Organizational unit*') + 1]
 
                 fl.info(msg=f"Access_token: {access_token}\n"
-                            f"datetime: {expires_in_time}"
-                            f"first_name: {first_name}"
-                            f"last_name: {last_name}"
-                            f"personal_email: {personal_email}"
-                            f"suggested_email: {suggested_email}"
-                            f"organizational_unit: {organizational_unit}"
-                            f"personal_phone:{personal_phone}"
-                            f"gmail_groups (list): {str(gmail_groups)}"
-                            f"hire_start_date: {hire_start_date}"
-                            f"Token lifetime: {token_time}"
-                            f"token_datetime:{token_datetime}"
+                            f"datetime: {expires_in_time}\n"
+                            f"first_name: {first_name}\n"
+                            f"last_name: {last_name}\n"
+                            f"personal_email: {personal_email}\n"
+                            f"suggested_email: {suggested_email}\n"
+                            f"organizational_unit: {organizational_unit}\n"
+                            f"personal_phone:{personal_phone}\n"
+                            f"gmail_groups (list): {str(gmail_groups)}\n"
+                            f"hire_start_date: {hire_start_date}\n"
+                            f"Token lifetime: {token_time}\n"
+                            f"token_datetime:{token_datetime}\n"
                         )
 
                 # if the token needs to be refreshed
@@ -318,7 +297,7 @@ if __name__ == 'mainfastapi':
                         f.refresh_token_func()
                         f.send_jira_comment("Current access_token expired. It was automatically refreshed. "
                                             "Please try to create google account for the user again.\n"
-                                            "(Switch the ticket status -> \"In Progress\" -> \" Create a Google account\")", jira_key)
+                                            "(Switch the ticket status -> \"In Progress\" -> \"Create a Google account\")", jira_key)
 
                 # if there is a valid (< 1h token)
                 else:
@@ -341,300 +320,24 @@ if __name__ == 'mainfastapi':
                                             f"Check suggested email field and try again.", jira_key)
                     else:
                         """Suggested email is unique"""
-                        google_user = f.create_google_user_req(first_name, last_name, suggested_email, organizational_unit)
-                        if google_user[0] < 300:  # user created successfully
-                            fl.info(f"User {first_name} {last_name} is created. Username: {suggested_email}\n")
-                            f.send_jira_comment(f"(1/3) User *{first_name} {last_name}* is successfully created!\n"
-                                                f"User Email: *{suggested_email}*\n", jira_key)
+                        print(f'Celery task to create *Google account* for *"{suggested_email}"* is added.\n'
+                              'Please, wait...')
+                        f.send_jira_comment(f'*Celery task* to create *Google account* for *"{suggested_email}"* is added.\n'
+                                            'Please, wait...', jira_key)
 
-                            # proceeding to licence assignment according the department.
-
-                            if organizational_unit == 'Sales':
-                                assigned_license = f.assign_google_license('1010020020', suggested_email)
-
-                                if assigned_license[0] < 300:  # if success
-                                    f.send_jira_comment(
-                                        "(2/3) *Google Workspace Enterprise Plus* license, successfully assigned!", jira_key)
-                                    fl.info("Google Workspace Enterprise Plus license, assigned")
-
-                                elif assigned_license[0] == 412:
-                                    f.send_jira_comment(f"Not enough licenses. Google error:\n{assigned_license[1]}", jira_key)
-                                    fl.error(f"Not enough licenses. Google error:\n{assigned_license[1]}")
-
-                                else:  # if error
-                                    f.send_jira_comment("An error appeared while assigning google license.\n"
-                                                        f"Error code: {assigned_license[0]}\n"
-                                                        f"Error message: {assigned_license[1]['error']['message']}", jira_key)
-
-                                    fl.error(f"Error code: {assigned_license[0]}\n"
-                                             f"Error message: {assigned_license[1]['error']['message']}")
-
-                            # other department
-                            else:
-                                assigned_license = f.assign_google_license('Google-Apps-Unlimited', suggested_email)
-
-                                if assigned_license[0] < 300:  # if success
-                                    f.send_jira_comment("(2/3) G Suite Business license, successfully assigned!", jira_key)
-                                    fl.info("G Suite Business license, assigned!")
-
-                                elif assigned_license[0] == 412:
-                                    f.send_jira_comment(f"Not enough licenses. Google error:\n{assigned_license[1]}", jira_key)
-                                    fl.error(f"Not enough licenses. Google error:\n{assigned_license[1]}")
-
-                                else:  # if error
-                                    f.send_jira_comment("An error appeared while assigning google license.\n"
-                                                        f"Error code: {assigned_license[0]}\n"
-                                                        f"Error message: {assigned_license[1]['error']['message']}", jira_key)
-
-                                    fl.error(f"Error code: {assigned_license[0]}\n"
-                                             f"Error message: {assigned_license[1]['error']['message']}")
-
-                            fl.info(f"gmail_groups to assign: {str(gmail_groups)}")
-
-                            # errors are inside the function
-                            final_row = f.adding_user_to_google_group(gmail_groups, suggested_email)
-
-                            fl.info(f"Groups assigned: {final_row}")
-
-                            f.send_jira_comment(f"(3/3) Assigned google groups:\n"
-                                                f"{final_row}", jira_key)
-
-                            if organizational_unit == 'Technology':
-
-                                # Ping Idelia to add the new IT emp to Gitlab and CI/CD
-                                message = open("mention_idelia.txt", "r", encoding="UTF-8").read()
-                                f.send_jira_comment(message=json.loads(message.replace('suggested_email', suggested_email)),
-                                                    jira_key=jira_key)
-
-                                # надо все через Try except сделать, иначе будет падать(
-                                # adding IT emp to calendar
-                                calendar_id = 'junehomes.com_6f1l2kssibhmsg10e7fvnmdv1o@group.calendar.google.com'
-                                adding_to_calendar_result = f.adding_to_junehomes_dev_calendar(suggested_email=suggested_email,
-                                                                                               calendar_id=calendar_id)
-
-                                if adding_to_calendar_result[0] < 300:  # user created successfully
-                                    fl.info(f"User *{suggested_email}* is added to *[junehomes-dev calendar|]*.")
-                                    f.send_jira_comment(f"User *{suggested_email}* is added to *[junehomes-dev "
-                                                        f"calendar|https://calendar.google.com/calendar/u/0/r/settings/calendar/anVuZWhvbWVzLmNvbV82ZjFsMmtzc2liaG1zZzEwZTdmdm5tZHYxb0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t?pli=1]*.",
-                                                        jira_key)
-
-                                else:
-                                    f.send_jira_comment(
-                                        f"An error occured while trying to add a User: *{suggested_email}* to *[junehomes-dev calendar|]*.\n"
-                                        f"Error code: *{adding_to_calendar_result[0]}*\n"
-                                        f"Error body: {adding_to_calendar_result[1]}",
-                                        jira_key=jira_key)
-                                    fl.info(f"An error occured while trying to add a User: *{suggested_email}* to *[junehomes-dev calendar|]*.\n"
-                                            f"Error code: *{adding_to_calendar_result[0]}*\n"
-                                            f"Error body: {adding_to_calendar_result[1]}")
-
-                                adding_user_to_jira = f.adding_jira_cloud_user(suggested_email=suggested_email)
-
-                                if adding_user_to_jira[0] < 300:
-                                    fl.info(f"Jira user *{suggested_email}* is created.")
-                                    f.send_jira_comment(f"Jira user *{suggested_email}* is created.", jira_key)
-
-                                    # jira_account_id =adding_user_to_jira[1]['accountId']
-
-                                    # when user is created - necessary groups are assigned automatically.
-                                    # "name": "confluence-users","groupId": "8f022c21-2ba6-4242-ada9-45c7bf922ff9",
-
-                                    # "name": "jira-software-users","groupId": "30e206a9-d09a-418f-90f5-5144c3ece85a",
-                                    # try:
-                                    #     group_confluence_users = f.adding_jira_user_to_group(account_id=jira_account_id,
-                                    #                                                             group_id="8f022c21-2ba6-4242-ada9-45c7bf922ff9")
-                                    #     group_jira_software_users = f.adding_jira_user_to_group(account_id=jira_account_id,
-                                    #                                                             group_id="30e206a9-d09a-418f-90f5-5144c3ece85a")
-                                    # except Exception as error:
-                                    #     fl.info(f"An error occurred while trying to add to add Jira user *{suggested_email}* to a group.\n"
-                                    #             f"Error: {error}")
-                                    #     f.send_jira_comment(f"An error occurred while creating Jira user *{suggested_email}*  to a group.\n"
-                                    #                         f"Error: {error}", jira_key)
-
-                                else:
-                                    fl.info(f"An error occurred while creating Jira user *{suggested_email}*.\n"
-                                            f"Error code: {adding_user_to_jira[0]} \n"
-                                            f"Error body: {adding_user_to_jira[1]}")
-                                    f.send_jira_comment(f"An error occurred while creating Jira user *{suggested_email}*.\n"
-                                                        f"Error code: {adding_user_to_jira[0]} \n"
-                                                        f"Error body: {adding_user_to_jira[1]}", jira_key)
-
-                                # creating account on ELK Development
-                                try:
-                                    adding_user_to_elk_dev = f.create_elk_user(firstname=first_name,
-                                                                               lastname=last_name,
-                                                                               suggested_email=suggested_email,
-                                                                               role='viewer',
-                                                                               dev_or_prod='dev'
-                                                                               )
-                                except Exception as e:
-                                    f.send_jira_comment('An error occurred when trying to add a user on ELK DEV:\n'
-                                                        f'{e}', jira_key)
-                                else:
-
-                                    if adding_user_to_elk_dev[0].status_code < 300:
-
-                                        fl.info(f'ELK Dev user is created. ELK dev credentials will be sent in: '
-                                                f'*{round(unix_countdown_time / 3600)} hours*.')
-                                        f.send_jira_comment(f'ELK Dev user is created. ELK dev credentials will be sent in: '
-                                                            f'*{round(unix_countdown_time / 3600)} hours*.', jira_key)
-
-                                        template = env.get_template(name="kibana_jinja.txt")
-
-                                        final_draft = template.render(first_name=first_name,
-                                                                      suggested_email=suggested_email,
-                                                                      stage="Development",
-                                                                      password=adding_user_to_elk_dev[1]
-                                                                      )
-
-                                        send_gmail_message.apply_async(
-                                            ('ilya.konovalov@junehomes.com',
-                                             [personal_email],
-                                             email_cc_list + [supervisor_email],
-                                             'Your Kibana.Development credentials.',
-                                             final_draft,
-                                             round(unix_countdown_time / 3600)),
-                                            queue='new_emps',
-                                            countdown=round(unix_countdown_time) + 120
-                                        )
-
-                                    else:
-                                        fl.info(f'ELK Dev user is NOT created!\n'
-                                                f'Response:{adding_user_to_elk_dev[0].status_code}\n'
-                                                f'{adding_user_to_elk_dev[0].json()}')
-
-                                        f.send_jira_comment(f'ELK Dev user is *NOT created*!\n'
-                                                            f'Response:{adding_user_to_elk_dev[0].status_code}\n'
-                                                            f'{adding_user_to_elk_dev[0].json()}', jira_key)
-
-                                # creating account on ELK Production
-                                try:
-                                    adding_user_to_elk_prod = f.create_elk_user(firstname=first_name,
-                                                                                lastname=last_name,
-                                                                                suggested_email=suggested_email,
-                                                                                role='viewer',
-                                                                                dev_or_prod='prod'
-                                                                                )
-                                except Exception as e:
-                                    f.send_jira_comment('An error occurred when trying to add a user on ELK PROD:\n'
-                                                        f'{e}', jira_key)
-                                else:
-
-                                    if adding_user_to_elk_prod[0].status_code < 300:
-
-                                        template = env.get_template(name="kibana_jinja.txt")
-
-                                        final_draft = template.render(first_name=first_name,
-                                                                      suggested_email=suggested_email,
-                                                                      stage="Production",
-                                                                      password=adding_user_to_elk_dev[1]
-                                                                      )
-
-                                        send_gmail_message.apply_async(
-                                            ('ilya.konovalov@junehomes.com',
-                                             [personal_email],
-                                             email_cc_list + [supervisor_email],
-                                             'Your Kibana.Production credentials.',
-                                             final_draft,
-                                             round(unix_countdown_time / 3600)),
-                                            queue='new_emps',
-                                            countdown=round(unix_countdown_time) + 120
-                                        )
-
-                                        fl.info(f'ELK Prod user is created. ELK Prod credentials will be sent in: '
-                                                f'*{round((unix_countdown_time / 3600), 2)} hours*.')
-                                        f.send_jira_comment(f'ELK Prod user is created. ELK Prod credentials will be sent in: '
-                                                            f'*{round((unix_countdown_time / 3600), 2)} hours*.', jira_key)
-                                    else:
-
-                                        fl.info(f'ELK Prod user is *NOT created!*'
-                                                f'Response: {adding_user_to_elk_prod[0].status_code} '
-                                                f'{adding_user_to_elk_prod[0].json()}')
-
-                                        f.send_jira_comment(f'ELK Prod user is NOT created!\n'
-                                                            f'Response:{adding_user_to_elk_prod[0].status_code}\n'
-                                                            f'{adding_user_to_elk_prod[0].json()}', jira_key)
-
-                            # create a template for email
-                            template = env.get_template(name="google_mail_jinja.txt")
-                            final_draft = template.render(first_name=first_name,
-                                                          suggested_email=suggested_email,
-                                                          password=f.password
-                                                          )
-                            print(final_draft)
-
-                            # Sending a corporate email
-                            # send_gmail_message.apply_async(
-                            #     ('ilya.konovalov@junehomes.com',
-                            #      [personal_email],
-                            #      email_cc_list + [supervisor_email],
-                            #      'June Homes: corporate email account',
-                            #      final_draft,
-                            #      round(unix_countdown_time / 3600)),
-                            #     queue='new_emps',
-                            #     countdown=round(unix_countdown_time) + 120
-                            # )
-                            fl.info(f'June Homes: corporate email account will be sent in {round((unix_countdown_time / 3600), 2)}')
-
-                            # calculates the time before sending the email
-                            # countdown=60
-                            f.send_jira_comment(f"*June Homes: corporate email account* email will be sent to\n "
-                                                f"User: *{personal_email}*\n"
-                                                f"In: *{round((unix_countdown_time / 3600), 2)}* hours.\n", jira_key)
-
-                            template = env.get_template('it_services_and_policies_wo_trello_zendesk.txt')
-                            final_draft = template.render()
-
-                            # at the end, when all services are created, an IT security policies email should be sent
-                            if organizational_unit == 'Resident Experience':
-
-                                template = env.get_template('it_services_and_policies_support.txt')
-                                final_draft = template.render()
-
-                                # sends IT services and policies for residents experience
-                                send_gmail_message.apply_async(
-                                    ('ilya.konovalov@junehomes.com',
-                                     [suggested_email],
-                                     [],
-                                     'IT services and policies',
-                                     final_draft,
-                                     round(unix_countdown_time / 3600)),
-                                    queue='new_emps',
-                                    countdown=round(unix_countdown_time) + 600
-                                )
-
-                                # calculates the time before sending the email
-                                fl.info(f'June Homes: corporate email account will be sent in {round((unix_countdown_time / 3600), 2)}')
-
-                            else:
-
-                                template = env.get_template('it_services_and_policies_wo_trello_zendesk.txt')
-                                final_draft = template.render()
-
-                                # sends it_services_and_policies_wo_trello_zendesk email to gmail
-                                send_gmail_message.apply_async(
-                                    ('ilya.konovalov@junehomes.com',
-                                     [suggested_email],
-                                     [],
-                                     'IT services and policies',
-                                     final_draft,
-                                     round(unix_countdown_time / 3600)),
-                                    queue='new_emps',
-                                    countdown=round(unix_countdown_time) + 600
-                                )
-
-                                # calculates the time before sending the email
-                                fl.info(f"IT services and policies email will be sent in {round((unix_countdown_time + 300) / 3600, 2)} hours.")
-                            f.send_jira_comment("Final is reached!\n"
-                                                f"*IT services and policies* email will be sent in *{round((unix_countdown_time + 300) / 3600, 2)}* "
-                                                "hours.",
-                                                jira_key=jira_key)
-
-                        # if the normal flow is violated - error creating google user
-                        else:
-                            f.send_jira_comment("An error occurred while creating a google user!\n"
-                                                f"Error code: {google_user[0]}\n"
-                                                f"Error response: {google_user[1]}", jira_key)
+                        async_google_account_license_groups_calendar_creation.apply_async(
+                            (first_name,
+                             last_name,
+                             suggested_email,
+                             organizational_unit,
+                             gmail_groups,
+                             unix_countdown_time,
+                             personal_email,
+                             supervisor_email,
+                             role_title,
+                             jira_key),
+                            queue='new_emps'
+                        )
 
             elif jira_new_status == "Create a FrontApp account":
 
@@ -642,10 +345,10 @@ if __name__ == 'mainfastapi':
                     frontapp_role = f.fetching_params_from_file(
                         filename_contains="frontapp",
                         jsonvalue="teammate_template_id",
-                        position_title=position_title,
+                        position_title=role_title,
                         jira_key=jira_key
                     )
-                    # print(gmail_groups)
+                    print('role is taken from config on Notion')
 
                 except Exception as e:
                     print(f"Error: {e}")
@@ -653,6 +356,7 @@ if __name__ == 'mainfastapi':
                     frontapp_role = jira_description[jira_description.index('*If needs FrontApp, select a user role*') + 1]
                     # new roles should be added to the dict in future
                     frontapp_role = roles_dict[frontapp_role]
+                    print('role is taken from jira ticket description!')
 
                 fl.info(f"Frontapp role: {frontapp_role}")
                 print(frontapp_role)
@@ -684,7 +388,7 @@ if __name__ == 'mainfastapi':
                     user_email_analogy = f.fetching_params_from_file(
                         filename_contains="amazonconnect",
                         jsonvalue="user_email_analogy",
-                        position_title=position_title,
+                        position_title=role_title,
                         jira_key=jira_key
                     )
                     # print(user_email_analogy)
@@ -726,19 +430,20 @@ if __name__ == 'mainfastapi':
             elif jira_new_status == 'Create a JuneOS account':
                 try:
                     organizational_unit = f.fetching_params_from_file(
-                        filename_contains="googleworkspace",
+                        filename_contains="googleworkspace",  # googleworkspace here because we're checking the org unit there,
                         jsonvalue='Organizational Unit',
-                        position_title=position_title,
+                        position_title=role_title,
                         jira_key=jira_key
                     )
+                    print('the information is taken from config on Notion')
                 except Exception as e:
                     print(f"Error: {e}")
                     # BASED ON THE OLD DESCRIPTION
                     organizational_unit = jira_description[jira_description.index('*Organizational unit*') + 1]
+                    print('the information is taken from description!')
                 fl.info(organizational_unit)
 
                 if organizational_unit == 'Technology':
-                    '''Группы добавлять вручную в json файле'''
                     '''Для Technology всегда ставится галка супер юзер вручную'''
 
                     juneos_user = f.create_juneos_user(first_name=first_name,
@@ -754,7 +459,7 @@ if __name__ == 'mainfastapi':
                         f.send_jira_comment("*JuneOS development* user created.\n"
                                             f"Username: *{suggested_email}*, \n"
                                             f"*[User link|https://dev.junehomes.net/december_access/users/user/{juneos_user.json()['user']['id']}/change/] "
-                                            f"(Don't forget to make him a superuser on Dev.)*.\n"
+                                            f"(Don't forget to make him a superuser on JuneOS.Development.)*.\n"
                                             f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
                                             jira_key=jira_key)
 
@@ -788,34 +493,42 @@ if __name__ == 'mainfastapi':
                                             f'*{juneos_user.json()["user"]}*',
                                             jira_key=jira_key)
 
-                elif organizational_unit == 'Sales':
-                    fl.info('Sales, WIP')
-
+                elif organizational_unit in ['Sales', 'Resident Experience', 'Performance Marketing']:
+                    print(f"organizational_unit [{organizational_unit}] received.")
                     try:
                         groups = f.fetching_params_from_file(
                             filename_contains="juneos",
                             jsonvalue='groups',
-                            position_title=position_title,
+                            position_title=role_title,
                             jira_key=jira_key
                         )
                         if groups is None:
                             pass
                     except Exception as e:
-                        print(f"Error: {e}")
-                        # BASED ON THE OLD DESCRIPTION
-                    else:
+                        print(f"Couldn't get the value from JuneOS file config. Error: {e}")
+
+                    else:  # BASED ON THE OLD DESCRIPTION
+                        print(f"Trying to get if from prefilled file on the disk...")
                         try:
-                            groups = f.get_juneos_groups_from_position_title(file_name='groups_sales.json')[position_title]
+                            if organizational_unit == 'Sales':
+                                groups = f.get_juneos_groups_from_role_title(file_name='groups_sales.json')[role_title]
+                            elif organizational_unit == 'Resident Experience':
+                                groups = f.get_juneos_groups_from_role_title(file_name='groups_resident_experience.json')[role_title]
+                            elif organizational_unit == 'Performance Marketing':
+                                groups = f.get_juneos_groups_from_role_title(file_name='groups_performance_marketing.json')[role_title]
+
                             fl.info(f"the group was found! \n{str(groups)}")
 
                         except Exception as error:
                             fl.error(error)
-                            f.send_jira_comment(f'An error occurred while trying to search a user position:\n'
+                            f.send_jira_comment(f'An error occurred while trying to search a user role both on Notion and on disk:\n'
                                                 f'*{error}* for *{organizational_unit}*.\n'
-                                                f'Check if position exists in /permissions_by_orgunits/*groups_sales.json*'
-                                                f' in and update json. Then try again.',
+                                                f'Check if role exists in /permissions_by_orgunits/*groups_YOUR_ORG_UNIT_NAME.json*'
+                                                f' in and update .json or in *Notion*. Then try again.',
                                                 jira_key=jira_key)
                             return KeyError(error)
+
+                    print("Trying to create a JuneOS user")
 
                     juneos_user = f.create_juneos_user(first_name=first_name,
                                                        last_name=last_name,
@@ -826,7 +539,7 @@ if __name__ == 'mainfastapi':
 
                     if juneos_user.status_code < 300:
                         # send event status as comment
-                        fl.info('user created sucessfully!')
+                        fl.info(f"*JuneOS* user created. Username: *{suggested_email}*, \n")
 
                         template = env.get_template(name="juneos_jinja.txt")
                         final_draft = template.render(first_name=first_name,
@@ -911,249 +624,10 @@ if __name__ == 'mainfastapi':
                                             f'*{juneos_user.json()["errors"]}*',
                                             jira_key=jira_key)
 
-                elif organizational_unit == 'Resident Experience':
-                    fl.info('Got into Support, WIP section.')
-
-                    try:
-                        groups = f.fetching_params_from_file(
-                            filename_contains="juneos",
-                            jsonvalue='groups',
-                            position_title=position_title,
-                            jira_key=jira_key
-                        )
-                        if groups is None:
-                            pass
-                    except Exception as e:
-                        print(f"Error: {e}")
-                        # BASED ON THE OLD DESCRIPTION
-
-                        try:
-                            groups = f.get_juneos_groups_from_position_title(file_name='groups_resident_experience.json')[position_title]
-                            fl.info(f"the group was found! \n{str(groups)}")
-
-                        except Exception as error:
-                            fl.error(error)
-                            f.send_jira_comment(f'An error occurred while trying to search a user position:\n'
-                                                f'*{error}* for *{organizational_unit}*.\n'
-                                                f'Check if position exists in /permissions_by_orgunits/*groups_sales.json*'
-                                                f' in and update json. Then try again.',
-                                                jira_key=jira_key)
-                            return KeyError(error)
-
-                    fl.info(msg="Trying to create a JuneOS user")
-
-                    juneos_user = f.create_juneos_user(first_name=first_name,
-                                                       last_name=last_name,
-                                                       suggested_email=suggested_email,
-                                                       personal_phone=personal_phone,
-                                                       dev_or_prod='prod',  # change to prod when prod will be released
-                                                       )
-
-                    if juneos_user.status_code < 300:
-                        # send event status as comment
-
-                        fl.info(f"*JuneOS* user created. Username: *{suggested_email}*, \n")
-
-                        template = env.get_template(name="juneos_jinja.txt")
-                        final_draft = template.render(first_name=first_name,
-                                                      suggested_email=suggested_email
-                                                      )
-
-                        send_gmail_message.apply_async(
-                            ('ilya.konovalov@junehomes.com',
-                             [suggested_email],
-                             email_cc_list,
-                             'Access to JuneOS property management system',
-                             final_draft,
-                             round(unix_countdown_time / 3600)
-                             ),
-                            queue='new_emps',
-                            countdown=round(unix_countdown_time) + 120
-                        )
-
-                        fl.info(f"email 'Access to JuneOS property management system' will be sent in: {round(unix_countdown_time / 3600)}*, \n")
-
-                        f.send_jira_comment("*JuneOS* user created.\n"
-                                            f"Username: *{suggested_email}*, \n"
-                                            f"*[User link|https://junehomes.com/december_access/users/user/{juneos_user.json()['user']['id']}/change/]*.\n"
-                                            f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
-                                            jira_key=jira_key)
-
-                        juneos_auth = f.juneos_devprod_authorization(dev_or_prod='prod')
-                        if juneos_auth.status_code < 300:
-                            csrftoken = juneos_auth.cookies['csrftoken']
-                            sessionid = juneos_auth.cookies['sessionid']
-                            token = juneos_auth.json()['token']
-
-                            juneos_user_id = juneos_user.json()['user']['id']
-
-                            fl.info(f"successfully authenticated in JuneOS production: {str(juneos_auth.status_code)}")
-                            fl.info("Trying to Assign groups")
-
-                            assigned_groups = f.assign_groups_to_user(user_id=juneos_user_id,
-                                                                      groups=groups,
-                                                                      dev_or_prod='prod',
-                                                                      token=token,
-                                                                      csrftoken=csrftoken,
-                                                                      sessionid=sessionid
-                                                                      )
-
-                            if assigned_groups[0] < 300:
-                                fl.info('JuneOS groups have been assigned successfully')
-                                f.send_jira_comment('Groups in JuneOS are assigned to *[user|https://junehomes.com/december_access/'
-                                                    f'users/user/{juneos_user_id}/change/]*.\n',
-                                                    jira_key=jira_key)
-
-                            else:
-                                fl.error('An error occurred while assigning groups to JuneOS user.\n'
-                                         f'Error code: *{assigned_groups[0]}* \n\n'
-                                         f'*{assigned_groups[1]}')
-                                f.send_jira_comment('An error occurred while assigning groups to JuneOS user.\n'
-                                                    f'Error code: *{assigned_groups[0]}* \n\n'
-                                                    f'*{assigned_groups[1]}*',
-                                                    jira_key=jira_key)
-
-                        else:
-                            fl.error('An error occurred while trying to authenticate on JuneOS.\n'
-                                     f'Error code: *{juneos_auth.status_code}* \n\n'
-                                     f'*{juneos_auth.json()}*')
-                            f.send_jira_comment('An error occurred while trying to authenticate on JuneOS.\n'
-                                                f'Error code: *{juneos_auth.status_code}* \n\n'
-                                                f'*{juneos_auth.json()}*',
-                                                jira_key=jira_key)
-                    else:
-                        fl.error('An error occurred while creating a JuneOS user.\n'
-                                 f'Error code: *{juneos_user.status_code}* \n\n'
-                                 f'*{juneos_user.json()["errors"]}*')
-                        f.send_jira_comment('An error occurred while creating a JuneOS user.\n'
-                                            f'Error code: *{juneos_user.status_code}* \n\n'
-                                            f'*{juneos_user.json()["errors"]}*',
-                                            jira_key=jira_key)
-
-                elif organizational_unit == 'Performance Marketing':
-                    print('Performance Marketing, WIP')
-
-                    try:
-                        groups = f.fetching_params_from_file(
-                            filename_contains="juneos",
-                            jsonvalue='groups',
-                            position_title=position_title,
-                            jira_key=jira_key
-                        )
-                        if groups is None:
-                            pass
-                    except Exception as e:
-                        print(f"Error: {e}")
-                        # BASED ON THE OLD DESCRIPTION
-
-                        try:
-                            groups = f.get_juneos_groups_from_position_title(file_name='groups_performance_marketing.json')[position_title]
-                            fl.info(f"the group was found! \n{str(groups)}")
-
-                        except Exception as error:
-                            fl.error(error)
-                            f.send_jira_comment(f'An error occurred while trying to search a user position:\n'
-                                                f'*{error}* for *{organizational_unit}*.\n'
-                                                f'Check if position exists in /permissions_by_orgunits/*groups_sales.json*'
-                                                f' in and update json. Then try again.',
-                                                jira_key=jira_key)
-                            return KeyError(error)
-
-                    juneos_user = f.create_juneos_user(first_name=first_name,
-                                                       last_name=last_name,
-                                                       suggested_email=suggested_email,
-                                                       personal_phone=personal_phone,
-                                                       dev_or_prod='prod',
-                                                       )
-
-                    if juneos_user.status_code < 300:
-
-                        template = env.get_template(name="juneos_jinja.txt")
-                        final_draft = template.render(first_name=first_name,
-                                                      suggested_email=suggested_email
-                                                      )
-
-                        send_gmail_message.apply_async(
-                            ('ilya.konovalov@junehomes.com',
-                             [suggested_email],
-                             email_cc_list,
-                             'Access to JuneOS property management system',
-                             final_draft,
-                             round(unix_countdown_time / 3600)
-                             ),
-                            queue='new_emps',
-                            countdown=round(unix_countdown_time) + 120
-                        )
-                        fl.info(f"email 'Access to JuneOS property management system' will be sent in: {round(unix_countdown_time / 3600)}*, \n")
-                        f.send_jira_comment("*JuneOS* user created.\n"
-                                            f"Username: *{suggested_email}*, \n"
-                                            f"*[User link|https://junehomes.com/december_access/users/user/{juneos_user[2]}/change/]*.\n"
-                                            f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
-                                            jira_key=jira_key)
-
-                        juneos_auth = f.juneos_devprod_authorization(dev_or_prod='prod')
-
-                        if juneos_auth.status_code < 300:
-
-                            csrftoken = juneos_auth.cookies['csrftoken']
-                            sessionid = juneos_auth.cookies['sessionid']
-                            token = juneos_auth.json()['token']
-
-                            juneos_user_id = juneos_user.json()['user']['id']
-
-                            fl.info(f"successfully authenticated in JuneOS production: {str(juneos_auth.status_code)}")
-                            fl.info("Trying to Assign groups")
-
-                            assigned_groups = f.assign_groups_to_user(user_id=juneos_user_id,
-                                                                      groups=groups,
-                                                                      dev_or_prod='prod',
-                                                                      token=token,
-                                                                      csrftoken=csrftoken,
-                                                                      sessionid=sessionid
-                                                                      )
-
-                            if assigned_groups[0] < 300:
-                                fl.info('groups assigned')
-                                if position_title in ["Property manager", "Property Manager"]:
-                                    f.send_jira_comment(f"Groups in JuneOS are successfully assigned to *[user|https://junehomes.com/december_access/"
-                                                        f"users/user/{juneos_user_id}/change/]*.\n"
-                                                        f"*Don't forget to add user to {position_title}s on juneOS.*\n"
-                                                        f"*[LINK|https://junehomes.com/december_access/staff/propertymanager/add/]*",
-                                                        jira_key=jira_key)
-                                else:
-                                    f.send_jira_comment('Groups in JuneOS are successfully assigned to *[user|https://junehomes.com/december_access/'
-                                                        f'users/user/{juneos_user_id}/change/]*.\n',
-                                                        jira_key=jira_key)
-
-                            else:
-                                fl.error('An error occurred while assigning groups to JuneOS user.\n'
-                                         f'Error code: *{assigned_groups[0]}* \n\n'
-                                         f'*{assigned_groups[1]}')
-                                f.send_jira_comment('An error occurred while assigning groups to JuneOS user.\n'
-                                                    f'Error code: *{assigned_groups[0]}* \n\n'
-                                                    f'*{assigned_groups[1]}*',
-                                                    jira_key=jira_key)
-
-                        else:
-                            fl.error('An error occurred while trying to authenticate on JuneOS.\n'
-                                     f'Error code: *{juneos_auth.status_code}* \n\n'
-                                     f'*{juneos_auth.json()}*')
-                            f.send_jira_comment('An error occurred while trying to authenticate on JuneOS.\n'
-                                                f'Error code: *{juneos_auth.status_code}* \n\n'
-                                                f'*{juneos_auth.json()}*',
-                                                jira_key=jira_key)
-                    else:
-                        fl.error('An error occurred while creating a JuneOS user.\n'
-                                 f'Error code: *{juneos_user.status_code}* \n\n'
-                                 f'*{juneos_user.json()["user"]}*')
-                        f.send_jira_comment('An error occurred while creating a JuneOS user.\n'
-                                            f'Error code: *{juneos_user.status_code}* \n\n'
-                                            f'*{juneos_user.json()["user"]}*',
-                                            jira_key=jira_key)
-
                 else:
-                    print(organizational_unit)
-                    print("Account is not created because the JuneOS is not specified for this org. unit")
+                    print(f"Account is not created because the JuneOS is not specified for this org. unit: [{organizational_unit}]")
+                    f.send_jira_comment(f"Account is not created because the JuneOS is not specified for this *Organizational unit*:\"{organizational_unit}\"", jira_key)
+                return
 
             elif jira_new_status == "Create a Zendesk account":
                 print("WIP Zendesk, probably will never be done ;')")
@@ -1164,14 +638,15 @@ if __name__ == 'mainfastapi':
                                     'here|https://www.notion.so/junehomes/How-to-create-accounts-for-new-Employees-6b78fbc2a124400687df01cd73a14d4e'
                                     '#6fc1aec9f79a44de93919fefa19095fd]*.',
                                     jira_key=jira_key)
-                pass
+                return
 
             elif jira_new_status == "Check Role and Permissions":
                 """Checking for filling out RoR table"""
                 new_check_role_and_permissions.apply_async(
-                    (position_title,
+                    (role_title,
                      jira_key),
                     queue='other')
+                return
 
             elif jira_new_status in ["Done", "Rejected"]:
                 try:
@@ -1182,12 +657,11 @@ if __name__ == 'mainfastapi':
                     print("Exception:", e)
 
             else:
-                fl.info('Got a status change different from what triggers the user account creation.')
+                fl.info('Got a status change different from what triggers the user account creation. Waiting for a valid status change...')
 
         else:
             fl.info(f"The field \"{detect_change_type}\" was changed to: \"{detect_action}\". \n"
                     "Nothing will be done. Awaiting for the other request")
-
 
 
     @app.post("/maintenance_hiring", status_code=200)  # Jira webhook, tag "maintenance employee hiring"
@@ -1207,6 +681,7 @@ if __name__ == 'mainfastapi':
             print(jira_description)
 
             position_title = jira_description[jira_description.index('*Position title*') + 1]
+            role_title = jira_description[jira_description.index('*Role title*') + 1]
             first_name = jira_description[jira_description.index('*First name*') + 1]
             last_name = jira_description[jira_description.index('*Last name*') + 1]
 
@@ -1380,7 +855,7 @@ if __name__ == 'mainfastapi':
             elif jira_new_status == "Check Role and Permissions":
                 """Checking for filling out RoR table"""
                 check_role_permissions.apply_async(
-                    (position_title,
+                    (role_title,
                      jira_key),
                     queue='other')
 

@@ -1,12 +1,21 @@
-# some variables which is usefult to twick from outside
+# some variables which is useful to twick
 
 # the list of users who receives a copy of emails
 email_cc_list = ['idelia@junehomes.com',
                  'ivan@junehomes.com',
                  'artyom@junehomes.com',
                  'maria.zhuravleva@junehomes.com',
-                 'zoi@junehomes.com'
+                 'zoi@junehomes.com',
+                 'glykeria@junehomes.com'
                  ]
+
+# https://bbf1-2600-1f18-fe6-4e00-a90a-82d3-9cb6-1179.ngrok.io - prod
+
+# test
+# email_cc_list = ['ilia19945@mail.com',
+#                  'ilya.konovalov@junehomes.com',
+#                  '456@123.com'
+#                  ]
 
 countdown_for_it_content = 7200  # was 28800 - for Moscow, 14400 for EDT; updated to 2h earlier
 countdown_for_others_depts = 18000  # was 46800 - for Moscow, 32400 for EDT; updated to 2h earlier

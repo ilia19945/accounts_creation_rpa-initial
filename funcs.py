@@ -129,9 +129,9 @@ def refresh_token_func():
 
 # https://developers.google.com/admin-sdk/directory/v1/guides/manage-users
 def create_google_user_req(first_name, last_name, suggested_email, organizational_unit):
-    global password
+    global google_password
     characters = string.ascii_letters + string.digits + string.punctuation
-    password = ''.join(random.choice(characters) for i in range(8))
+    google_password = ''.join(random.choice(characters) for i in range(8))
     """google response with another status which means that the account is not can be created."""
 
     # fl.info(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
@@ -147,7 +147,7 @@ def create_google_user_req(first_name, last_name, suggested_email, organizationa
             "familyName": f"{last_name}",
             "fullName": f"{first_name} {last_name}"
         },
-        "password": f"{password}",
+        "password": f"{google_password}",
         "isAdmin": False,
         "isDelegatedAdmin": False,
         "agreedToTerms": True,
@@ -163,14 +163,14 @@ def create_google_user_req(first_name, last_name, suggested_email, organizationa
                              data=payload)
     if response.status_code < 300:
         file = open(r'''User Accounts.txt''', 'a', encoding='utf-8')
-        file.write(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {password}\n\n")
+        file.write(f"{first_name} {last_name}\nUsername: {suggested_email}\nPassword: {google_password}\n\n")
         file.close()
     elif response.status_code >= 500:
         fl.error(f"an error on the google side occurred while creating a google user:\n {str(response.json())}")
         return response.status_code, response.__dict__
     else:
         fl.error(f"an error occurred while creating a google user\n {str(response.json())}")
-    return response.status_code, response.__dict__, password
+    return response.status_code, response.__dict__, google_password
 
 
 # https://developers.google.com/admin-sdk/licensing/v1/how-tos/using
@@ -586,7 +586,7 @@ def notion_search_for_role(position_title, jira_key):
 
     if len(response.json()['results']) == 0:  # if there is no role with this name
         # pprint(response.json()['results'], indent=1)
-        # print(f'the value "{position_title}" does not exist in column "Role/Persona name"')
+        # print(f'the value "{role_title}" does not exist in column "Role/Persona name"')
         send_jira_comment(f'the value "*{position_title}*" does not exist in column "Role/Persona name" ❌', jira_key=jira_key)
         return False
 
@@ -729,7 +729,6 @@ def notion_search_for_permission_block_children(block_id):
                 # print('Parsing...')
                 permissions_dict = json.loads(permissions)
                 # print('Permissions are parsed')
-                # check_permissions = True
                 return dict(permissions_dict), True  # tuple
 
             except Exception as e:
@@ -784,8 +783,8 @@ def fetching_params_from_file(filename_contains: str, jsonvalue: str, jira_key: 
             # return None
 
 
-def checking_config_for_service_existence(role_title, jira_key):
-    directory = f".\\roles_configs\\{jira_key}\\{role_title}"
+def checking_config_for_service_existence(position_title, jira_key):
+    directory = f".\\roles_configs\\{jira_key}\\{position_title}"
     items_list = []
     # print(directory)
     for item in os.listdir(directory):
@@ -902,6 +901,29 @@ def compare_role_configs_google(current_json_object, antecedent_json_object):
                               f'{c_value} - {type(c_value)}')
     return current_json_object
 
+def compare_role_configs_juneos(current_json_object, antecedent_json_object):
+    for c_index, (c_key, c_value) in enumerate(current_json_object.items()):
+        # print(c_index, c_key, c_value)
+        # print(current_json_object[c_key])
+        for a_index, (a_key, a_value) in enumerate(antecedent_json_object.items()):
+            if c_key == a_key:
+                if a_value == c_value:  # equal values
+                    pass
+                else:  # values are different / c_value needs to be updated
+                    if type(c_value) == list:
+                        for i in range(len(a_value)):
+                            if a_value[i] not in c_value:
+                                c_value.append(a_value[i])
+
+                        print('c_value:')
+                        print(c_value)
+                    elif type(c_value) == int:
+                        c_value = a_value
+                    else:
+                        print(f'A different value type is received: '
+                              f'{c_value} - {type(c_value)}')
+    return current_json_object
+
 
 def compare_role_configs_amazonconnect():
     print('сравнили конфиги в амазоне :)')
@@ -909,10 +931,6 @@ def compare_role_configs_amazonconnect():
 
 def compare_role_configs_slack():
     print('сравнили конфиги в slack :)')
-
-
-def compare_role_configs_juneos():
-    print('сравнили конфиги в juneos :)')
 
 
 def compare_role_configs_frontapp():
@@ -970,9 +988,25 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
                     # comparing current role json object vs. antecedent role json object for googleworkspace
                     relevant_config = compare_role_configs_google(current_json_object, antecedent_json_object)
                     print()
-                    print('=============this is relevant config')
+                    print('***************This is relevant googleworkspace config:')
                     print(relevant_config)
-                    print('=============')
+                    print('***************')
+                    print()
+
+                    if relevant_config:
+                        with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
+                            # file.write(str(relevant_config)) # более корректная запись
+                            json.dump(relevant_config, file, indent=4)
+                    else:
+                        print('relevant config: ', relevant_config)
+                        pass
+
+                elif config_name == 'juneos':
+                    relevant_config = compare_role_configs_juneos(current_json_object, antecedent_json_object)
+                    print()
+                    print('***************This is relevant juneos config:')
+                    print(relevant_config)
+                    print('***************')
                     print()
 
                     if relevant_config:
@@ -985,9 +1019,6 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
 
                 elif config_name == 'amazonconnect':
                     relevant_config = compare_role_configs_amazonconnect()
-
-                elif config_name == 'juneos':
-                    relevant_config = compare_role_configs_juneos()
 
                 elif config_name == 'frontapp':
                     relevant_config = compare_role_configs_frontapp()
@@ -1038,9 +1069,12 @@ def comparing_permission_from_notion_vs_config_on_disk(filename,
                 json.dump(relevant_config, file, indent=4)
 
         elif service_name == 'juneos':
+            relevant_config = compare_role_configs_juneos(data_file_config, permission_config[0])
+            print('relevant_config:')
+            print("сonfigs compared ✅")
+            print("====================")
             with open(filename, 'w+') as file:
-                # json.dump('{"test": 1}', file, indent=4)
-                json.dump(permission_config[0], file, indent=4)
+                json.dump(relevant_config, file, indent=4)
         else:  # пока просто перезаписываем
             with open(filename, 'w+') as file:
                 json.dump(permission_config[0], file, indent=4)
