@@ -681,7 +681,7 @@ def notion_search_for_role(position_title, jira_key):
         print("roles_tree:")
         print(roles_tree)
         print('Complete set of permissions:')
-        pprint(permissions_for_persona, depth=4, indent=1)
+        pprint(permissions_for_persona, indent=2)
         print('=============================================')
 
         if len(response.json()['results']) == 0:  # no permissions are linked to this role!
@@ -729,7 +729,7 @@ def notion_search_for_permission_block_children(block_id):
                 # print('Parsing...')
                 permissions_dict = json.loads(permissions)
                 # print('Permissions are parsed')
-                return dict(permissions_dict), True  # tuple
+                return dict(permissions_dict), True  # tuple, т.е. валидный, можно записать на диск
 
             except Exception as e:
                 print('Permissions are NOT parsed')
@@ -857,7 +857,7 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
             pages_list += f"+––> *[{permission_name}|{permission_url}]*: Inherited from the config on the disk. ✅\n"
 
         else:
-            json_object = False  # это уже это если валидация не прошла
+            json_object = False  # если валидация не прошла
             pages_list += f"*[{permission_name}|{permission_url}]*: {result}\n"
 
     elif level == 2:
@@ -1040,7 +1040,6 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
 
 def comparing_permission_from_notion_vs_config_on_disk(filename,
                                                        permission_config,
-                                                       pages_list,
                                                        permission_name,
                                                        permission_url,
                                                        service_name
@@ -1055,9 +1054,11 @@ def comparing_permission_from_notion_vs_config_on_disk(filename,
     except Exception as e:
         # если не смог прочитать конфиг, то просто перезаписываем и в jira комменте отписываемся что скипнули
 
-        print("couldn't read, error:", e)
+        print("couldn't read the permission on disc, error:", e)
         with open(filename, 'w+') as file:
             json.dump(permission_config[0], file, indent=4)
+        validation_result += f"*[{permission_name}|{permission_url}]*: successfully written.✅\n"
+        print(f"Permission '{filename}' is successfully written on the disc!")
     else:
         # если смог прочитать, то пытаемся сравнить по сервисам
         if service_name == 'googleworkspace':

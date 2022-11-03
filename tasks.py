@@ -504,7 +504,7 @@ def create_amazon_user(suggested_email,
     return
 
 
-@celery_app.task  #old process
+@celery_app.task  # old process
 def check_role_permissions(role_title, jira_key):
     send_jira_comment(f'*Celery task* to check permissions of *"{role_title}"* is added.\n'
                       'Please, wait...', jira_key)
@@ -546,22 +546,25 @@ def new_check_role_and_permissions(role_title, jira_key):
     send_jira_comment('A request to build a role config is sent to *Celery*. PLease, wait...\n '
                       'P.s. if there are lots of permissions and dependent roles it might take up to a few min for the config to be built.', jira_key=jira_key)
     permissions_history_check = []
+
     permissions_for_persona_list = notion_search_for_role(position_title, jira_key=jira_key)  # the list of page_ids
+    pprint(permissions_for_persona_list)
 
     if len(permissions_for_persona_list) == 0:  # если пермиссии для персоны не добавлены!
         print(f'Permissions are not added for {position_title}!')
         # send_jira_comment(f'Permissions are not added for *{position_title}* position ❌', jira_key=jira_key)
         # return  # ⚠️ ⚠️ ⚠️stops the main flow!
     else:
+        next_level_checker = False
 
-        # trying to create a directory for this role:
+        # # trying to create a directory for this role:
         try:
             path = os.path.join(f".\\roles_configs\\{jira_key}", position_title)
             mode = 0o666
             os.makedirs(path, mode)
         except Exception as e:
-            print("error on trying to create a file:", e)
-        finally:
+            print('An error while trying to create a folder:', e)
+        else:
             pages_list = ''
             for i in range(len(permissions_for_persona_list))[::-1]:  # как было раньше
 
@@ -575,16 +578,13 @@ def new_check_role_and_permissions(role_title, jira_key):
                 antecedent_permissions_set = permissions_for_persona_list[i - 1]
 
                 # здесь текущий (n) и за ним уровень (n-1) - НЕ корневые
-                # пока только для гугла, потом написать конфиги для остальных сервисов
+                # пока только для Google Workspace и JuneOS
                 if type(current_permissions_set) == list and type(antecedent_permissions_set) == list:  # здесь имеем сет из пермиссий, каждый из которых нужно сравнить с предыдущим, с конца*
                     # # print(f"{permissions_for_persona_list[i]} --- {type(*permissions_for_persona_list[i])}, this is a nested permissions")
                     # # print(current_permissions_set[0])
                     # # print(antecedent_permissions_set[0])
                     print("current and previous permissions sets are both type 'List'")
 
-                    # ================================================
-                    # ВСЕ РАБОТАЕТ УРА!!! ПРОСТО РАСКОММЕНТИТЬ ТО ЧТО МЕЖДУ ===
-                    #
                     for p in range(len(current_permissions_set[0])):  # берем n уровень, проверяем каждую пермиссию
                         # получаем результат проверки для коммента, название текущей роли и json конфиг
                         pages_list, current_role_name, current_json_object = compare_permissions_by_name(permissions_set=current_permissions_set,
@@ -616,7 +616,6 @@ def new_check_role_and_permissions(role_title, jira_key):
                                 print('else:', current_role_name)
                                 relevant_config = False
                                 continue
-
                             print(f'role_name_for_comparison - {file_role_name_for_comparison}')
                             relevant_config, pages_list = full_compare_by_name_and_permissions_with_file(
                                 config_name=file_role_name_for_comparison,
@@ -671,65 +670,79 @@ def new_check_role_and_permissions(role_title, jira_key):
                         print('current_result:', current_result)
                         # print('got OUT of notion_search_for_permission_block_children')
 
-                        if type(current_result) == tuple:
+                        if type(current_result) == tuple:  # tuple если конфиг валидный и нужно записать на диск
                             # print(data)
                             # if data != 'False':
                             print('data in the config != false')
-                            for i in range(len(items_list)):
-                                config_name = re.split('_', items_list[i])[0]
-                                print("config_name -", config_name, ", current_role_name -", current_role_name)
-                                if re.findall(config_name, current_role_name):
-                                    print('permissions can be compared')
-                                    print("name -", config_name, ", current_role_name -", current_role_name)
+                            if len(items_list) != 0:  # т.е. если в списке на диске уже есть какие-то конфиги
+                                print("ITEMS LIST HAS CONFIGS!")
+                                for i in range(len(items_list)):
+                                    config_name = re.split('_', items_list[i])[0]
                                     filename = f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json"
-                                    print('trying to read: ')
-                                    try:  # in case there errors were written to the file somehow on the previous iterations
-                                        with open(filename, 'r') as file:
-                                            data = json.loads(file.read())
-                                            print("data:", data)
-                                    except Exception as e:
-                                        print('the config couldn\'t be read:', e)
+                                    print("config_name -", config_name, ", current_role_name -", current_role_name)
+                                    if re.findall(config_name, current_role_name):
+                                        print('permissions can be compared')
+                                        print("name -", config_name, ", current_role_name -", current_role_name)
+                                        print('trying to read: ')
+                                        try:  # in case there errors were written to the file somehow on the previous iterations
+                                            with open(filename, 'r') as file:
+                                                data = json.loads(file.read())
+                                                print("data:", data)
+                                        except Exception as e:
+                                            print(e)
 
+                                        else:
+                                            if config_name == 'googleworkspace':
+                                                relevant_config = compare_role_configs_google(current_result[0], data)
+                                                print()
+                                                print('!***************This is relevant googleworkspace config:')
+                                                print(relevant_config)
+                                                print('***************')
+                                                print()
+                                                with open(filename, 'w+') as file:
+                                                    json.dump(relevant_config, file, indent=4)
+                                            elif config_name == 'juneos':
+                                                relevant_config = compare_role_configs_juneos(current_result[0], data)
+                                                print()
+                                                print('!***************This is relevant juneos config:')
+                                                print(relevant_config)
+                                                print('***************')
+                                                print()
+                                                with open(filename, 'w+') as file:
+                                                    json.dump(relevant_config, file, indent=4)
+
+                                            elif config_name == 'slack':  # doesn't work needs to be fixed
+                                                relevant_config = compare_role_configs_google(current_result[0], data)
+                                                print(relevant_config)
+                                                with open(filename, 'w+') as file:
+                                                    json.dump(relevant_config, file, indent=4)
+
+                                            elif config_name == 'amazonconnect':
+                                                relevant_config = compare_role_configs_google(current_result[0], data)
+                                                print(relevant_config)
+                                                with open(filename, 'w+') as file:
+                                                    json.dump(relevant_config, file, indent=4)
+
+                                        # items_list.append(f'{config_name}_config')
+                                        print('this is items list:')
+                                        print(items_list)
+                                        print('@@@@@@@@@@@@@@@@@@@@@@@')
                                     else:
-                                        if config_name == 'googleworkspace':
-                                            relevant_config = compare_role_configs_google(current_result[0], data)
-                                            print()
-                                            print('======== this is relevant config')
-                                            print(relevant_config)
-                                            print('========')
-                                            print()
-                                            with open(filename, 'w+') as file:
-                                                json.dump(relevant_config, file, indent=4)
+                                        print('^incomparable permissions, skipping')
+                                        print('------------')
 
-                                        elif config_name == 'juneos':
-                                            relevant_config = compare_role_configs_juneos(current_result[0], data)
-                                            print()
-                                            print('!***************This is relevant juneos config:')
-                                            print(relevant_config)
-                                            print('***************')
-                                            print()
-                                            with open(filename, 'w+') as file:
-                                                json.dump(relevant_config, file, indent=4)
+                            else:  # если на диске нет конфигов
+                                service_name = re.split('-', current_role_name)[-1]
+                                filename = f".\\roles_configs\\{jira_key}\\{position_title}\\{service_name}_config.json"
 
-                                        elif config_name == 'slack':  # doesn't work needs to be fixed
-                                            relevant_config = compare_role_configs_google(current_result[0], data)
-                                            print(relevant_config)
-                                            with open(filename, 'w+') as file:
-                                                json.dump(relevant_config, file, indent=4)
+                                with open(filename, 'w+') as file:
+                                    json.dump(current_result[0], file, indent=4)
 
-                                        elif config_name == 'amazonconnect':
-                                            relevant_config = compare_role_configs_google(current_result[0], data)
-                                            print(relevant_config)
-                                            with open(filename, 'w+') as file:
-                                                json.dump(relevant_config, file, indent=4)
-                                else:
-                                    print('^incomparable permissions, skipping')
-                                    print('------------')
-
+                                print("ITEMS LIST IS EMPTY! config_name -", service_name, ", current_role_name -", current_role_name)
+                                items_list.append(f'{service_name}_config.json')
                             pages_list += f"*[{current_role_name}|{current_role_url}]* : Validated. ✅\n"
                         else:
                             # print('not tupple, data: ', data)
-                            print('current_result:', current_result)
                             pages_list += f"*[{current_role_name}|{current_role_url}]*: {current_result}\n"
                             pages_list += "–––– ⬆️Permission is skipped during building *Permissions Tree*! Fix the error, otherwise the permissions tree may not be complete.\n"
                     # =================================
@@ -737,7 +750,11 @@ def new_check_role_and_permissions(role_title, jira_key):
                     # здесь обычные пермиссии
                     items_list = checking_config_for_service_existence(position_title=position_title, jira_key=jira_key)
                     pages_list += '\n\n'
+
                 else:
+                    if not next_level_checker:
+                        pages_list += 'Current role permissions:\n'
+                        next_level_checker = True
                     # составляем лист всех конфигов которые у нас уже есть в виде списка []
                     # print(f"{permissions_for_persona_list[i]['id']} --- {type(permissions_for_persona_list[i])}, this is a regular normal permission")
                     try:
@@ -779,7 +796,6 @@ def new_check_role_and_permissions(role_title, jira_key):
                                             pages_list += comparing_permission_from_notion_vs_config_on_disk(
                                                 filename=filename,
                                                 permission_config=permission_config,
-                                                pages_list=pages_list,
                                                 permission_name=permission_name,
                                                 permission_url=permission_url,
                                                 service_name=service_name
@@ -795,7 +811,6 @@ def new_check_role_and_permissions(role_title, jira_key):
                                                 pages_list += comparing_permission_from_notion_vs_config_on_disk(
                                                     filename=filename,
                                                     permission_config=permission_config,
-                                                    pages_list=pages_list,
                                                     permission_name=permission_name,
                                                     permission_url=permission_url,
                                                     service_name=service_name
@@ -809,8 +824,7 @@ def new_check_role_and_permissions(role_title, jira_key):
                                     # json.dump('{"test": 1}', file, indent=4)
                                     json.dump(permission_config[0], file, indent=4)
                                     pages_list += f"*[{permission_name}|{permission_url}]*: successfully written.✅\n"
-                                    print(f"Permission '{filename}' is successfully written on the disc - ", )
-
+                                    print(f"Permission '{filename}' is successfully written on the disc")
 
                         # т.е. если конфиг невалидный
                         else:  #
@@ -828,8 +842,8 @@ def new_check_role_and_permissions(role_title, jira_key):
             print(f"Length of the message for test purposes: {len(pages_list)}")
             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
-            send_jira_comment(message=f"Summary after reviewing permissions for *{role_title}* persona:\n{pages_list}\n"
-                                      f"Time taken: *{time.time() - t0} secs.*\n"
+            send_jira_comment(message=f"Summary after reviewing permissions for *{position_title}* persona:\n{pages_list}"
+                                      f"Time taken: {round(time.time() - t0, 1)}"
                                       f"*P.S. Remember to move ticket to \"Done\" / \"Rejected\" to rebuild config.*", jira_key=jira_key)
 
     del permissions_history_check
