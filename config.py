@@ -21,6 +21,7 @@ countdown_for_it_content = 7200  # was 28800 - for Moscow, 14400 for EDT; update
 countdown_for_others_depts = 18000  # was 46800 - for Moscow, 32400 for EDT; updated to 2h earlier
 
 # for frontapp
+# when the new role on Frontapp is added - it should be also added to this dictionary
 roles_dict = {
             "Sales regular user": "tea_14r7o",
             "Team member": "tea_14rd0",

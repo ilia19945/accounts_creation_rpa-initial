@@ -1,4 +1,3 @@
-import json
 import os.path
 import random
 import shutil
@@ -15,6 +14,10 @@ from tasks import send_gmail_message, create_amazon_user, check_role_permissions
 from fastapi import Body, FastAPI, HTTPException, Query
 from typing import Optional
 from jinja2 import Environment, FileSystemLoader
+
+from pathlib import Path
+data_folder = Path(".")
+
 
 # run server: uvicorn mainfastapi:app --reload --port 80
 # run ngrok: -> ngrok http 80
@@ -352,11 +355,24 @@ if __name__ == 'mainfastapi':
 
                 except Exception as e:
                     print(f"Error: {e}")
+
                     # BASED ON THE OLD DESCRIPTION
-                    frontapp_role = jira_description[jira_description.index('*If needs FrontApp, select a user role*') + 1]
-                    # new roles should be added to the dict in future
-                    frontapp_role = roles_dict[frontapp_role]
-                    print('role is taken from jira ticket description!')
+                    try:
+                        frontapp_role = jira_description[jira_description.index('*If needs FrontApp, select a user role*') + 1]
+                    except Exception as e:
+                        print(f"Error: {e}")
+                        return f.send_jira_comment(f'An error occurred while trying to get the information from ticket description config:\n'
+                                                   f'{e}', jira_key)
+                    else:
+                        # new roles should be added to the dict in future
+                        try:
+                            frontapp_role = roles_dict[frontapp_role]
+                            print('role is taken from jira ticket description!')
+                        except Exception as e:
+                            print(f"Error: {e}")
+                            return f.send_jira_comment(f'The Frontapp role *{frontapp_role}* was found on the description,'
+                                                       f' but the teammate_template_id wasn\'t found on server config. Error:\n'
+                                                       f'{e}\nAdd the role to configs.py or make sure the correct *"teammate_template_id": "value"* is filled up on Notion of this role.', jira_key)
 
                 fl.info(f"Frontapp role: {frontapp_role}")
                 print(frontapp_role)
@@ -395,6 +411,8 @@ if __name__ == 'mainfastapi':
 
                 except Exception as e:
                     print(f"Error: {e}")
+                    return f.send_jira_comment(f'An error occurred while trying to get the information from Amazon config:\n'
+                                               f'{e}', jira_key)
 
                 ############ BASED ON THE OLD DESCRIPTION
                 if user_email_analogy in ('', 'N/A ', ' ', '-'):
@@ -435,6 +453,7 @@ if __name__ == 'mainfastapi':
                         position_title=role_title,
                         jira_key=jira_key
                     )
+                    print("The organizational_unit:", organizational_unit)
                     print('the information is taken from config on Notion')
                 except Exception as e:
                     print(f"Error: {e}")
@@ -487,10 +506,10 @@ if __name__ == 'mainfastapi':
 
                         fl.error('An error occurred while creating a JuneOS.Development user.\n'
                                  f'Error code: *{juneos_user.status_code}* \n\n'
-                                 f'*{juneos_user.json()["user"]}*')
+                                 f'*{juneos_user.json()["errors"]}*')
                         f.send_jira_comment('An error occurred while creating a JuneOS.Development user.\n'
                                             f'Error code: *{juneos_user.status_code}* \n\n'
-                                            f'*{juneos_user.json()["user"]}*',
+                                            f'*{juneos_user.json()["errors"]}*',
                                             jira_key=jira_key)
 
                 elif organizational_unit in ['Sales', 'Resident Experience', 'Performance Marketing']:
@@ -506,16 +525,13 @@ if __name__ == 'mainfastapi':
                             pass
                     except Exception as e:
                         print(f"Couldn't get the value from JuneOS file config. Error: {e}")
-
-                    else:  # BASED ON THE OLD DESCRIPTION
-                        print(f"Trying to get if from prefilled file on the disk...")
-                        try:
+                        try:   # BASED ON THE OLD DESCRIPTION
                             if organizational_unit == 'Sales':
-                                groups = f.get_juneos_groups_from_role_title(file_name='groups_sales.json')[role_title]
+                                groups = f.get_juneos_groups_from_position_title(file_name='groups_sales.json')[role_title]
                             elif organizational_unit == 'Resident Experience':
-                                groups = f.get_juneos_groups_from_role_title(file_name='groups_resident_experience.json')[role_title]
+                                groups = f.get_juneos_groups_from_position_title(file_name='groups_resident_experience.json')[role_title]
                             elif organizational_unit == 'Performance Marketing':
-                                groups = f.get_juneos_groups_from_role_title(file_name='groups_performance_marketing.json')[role_title]
+                                groups = f.get_juneos_groups_from_position_title(file_name='groups_performance_marketing.json')[role_title]
 
                             fl.info(f"the group was found! \n{str(groups)}")
 
@@ -527,6 +543,8 @@ if __name__ == 'mainfastapi':
                                                 f' in and update .json or in *Notion*. Then try again.',
                                                 jira_key=jira_key)
                             return KeyError(error)
+                    else:
+                        print(f"Trying to get the config from prefilled file on the disk...")
 
                     print("Trying to create a JuneOS user")
 
@@ -650,7 +668,8 @@ if __name__ == 'mainfastapi':
 
             elif jira_new_status in ["Done", "Rejected"]:
                 try:
-                    path = os.path.join(f".\\roles_configs", jira_key)
+                    # path = os.path.join(f".\\roles_configs", jira_key)
+                    path = data_folder / 'roles_configs' / jira_key
                     if os.path.exists(path) and os.path.isdir(path):
                         shutil.rmtree(path)
                 except Exception as e:

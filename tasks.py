@@ -14,6 +14,7 @@ from email.mime.text import MIMEText
 import smtplib
 import fast_api_logging as fl
 
+from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 loader = FileSystemLoader("email_templates")
@@ -23,6 +24,7 @@ celery_app = Celery('tasks', backend='redis://localhost', broker='redis://localh
 celery_app.conf.broker_transport_options = {'visibility_timeout': 2592000}  # 30 days
 fl.info('Celery server has successfully initialised.')
 
+data_folder = Path(".")
 
 # to run celery with 3 queues type in terminal:
 # celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other -P gevent
@@ -516,7 +518,8 @@ def check_role_permissions(role_title, jira_key):
         return  # ⚠️ ⚠️ ⚠️stops the main flow!
     else:
         # trying to create a directory for this role:
-        path = os.path.join(f".\\roles_configs\\{jira_key}", role_title)
+        # path = os.path.join(f".\\roles_configs\\{jira_key}", role_title)
+        path = data_folder / 'roles_configs' / jira_key / role_title
         mode = 0o666
         os.makedirs(path, mode)
         pages_list = ''
@@ -528,7 +531,9 @@ def check_role_permissions(role_title, jira_key):
                 if type(result) == tuple:  # because the correct variant should contain "True" i.e. - (result,True)
                     pages_list += f"[{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']}|" \
                                   f"{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['url']}]: Validated, Good Job! ✅ \n"
-                    with open(f".\\roles_configs\\{jira_key}\\{role_title}\\{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']}.json", 'w+') as file:
+                    file_to_open = data_folder / 'roles_configs' / jira_key / role_title / get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text'] +'.json'
+                    # with open(f".\\roles_configs\\{jira_key}\\{role_title}\\{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']}.json", 'w+') as file:
+                    with open(file_to_open, 'w+') as file:
                         file.write(str(json.dumps(result[0])))
                 else:
                     pages_list += f"[{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']}|" \
@@ -559,7 +564,8 @@ def new_check_role_and_permissions(role_title, jira_key):
 
         # # trying to create a directory for this role:
         try:
-            path = os.path.join(f".\\roles_configs\\{jira_key}", position_title)
+            # path = os.path.join(f".\\roles_configs\\{jira_key}", position_title)
+            path = data_folder / 'roles_configs' / jira_key / role_title
             mode = 0o666
             os.makedirs(path, mode)
         except Exception as e:
@@ -678,7 +684,9 @@ def new_check_role_and_permissions(role_title, jira_key):
                                 print("ITEMS LIST HAS CONFIGS!")
                                 for i in range(len(items_list)):
                                     config_name = re.split('_', items_list[i])[0]
-                                    filename = f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json"
+                                    # filename = f ".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json"
+                                    filename = data_folder / 'roles_configs' / jira_key / position_title / f"{config_name}_config.json"
+
                                     print("config_name -", config_name, ", current_role_name -", current_role_name)
                                     if re.findall(config_name, current_role_name):
                                         print('permissions can be compared')
@@ -733,7 +741,9 @@ def new_check_role_and_permissions(role_title, jira_key):
 
                             else:  # если на диске нет конфигов
                                 service_name = re.split('-', current_role_name)[-1]
-                                filename = f".\\roles_configs\\{jira_key}\\{position_title}\\{service_name}_config.json"
+
+                                # filename = f".\\roles_configs\\{jira_key}\\{position_title}\\{service_name}_config.json"
+                                filename = data_folder / 'roles_configs' / jira_key / position_title / f"{service_name}_config.json"
 
                                 with open(filename, 'w+') as file:
                                     json.dump(current_result[0], file, indent=4)
@@ -770,7 +780,9 @@ def new_check_role_and_permissions(role_title, jira_key):
                         permission_name = get_notion_page_title(permission_id).json()['properties']['Name']['title'][0]['plain_text']
                         permission_url = get_notion_page_title(permission_id).json()['url']
                         service_name = re.split('-', permission_name)[-1]
-                        filename = f".\\roles_configs\\{jira_key}\\{position_title}\\{service_name}_config.json"
+
+                        # filename = f".\\roles_configs\\{jira_key}\\{position_title}\\{service_name}_config.json"
+                        filename = data_folder / 'roles_configs' / jira_key / position_title / f"{service_name}_config.json"
 
                         print('permission_name:', permission_name, "; service_name:", service_name)
                         permission_config = notion_search_for_permission_block_children(permission_id)
@@ -843,7 +855,7 @@ def new_check_role_and_permissions(role_title, jira_key):
             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
             send_jira_comment(message=f"Summary after reviewing permissions for *{position_title}* persona:\n{pages_list}"
-                                      f"Time taken: {round(time.time() - t0, 1)}"
+                                      f"Time taken: *{round(time.time() - t0, 1)} secs.*\n"
                                       f"*P.S. Remember to move ticket to \"Done\" / \"Rejected\" to rebuild config.*", jira_key=jira_key)
 
     del permissions_history_check

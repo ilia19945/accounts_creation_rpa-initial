@@ -11,6 +11,8 @@ from email.mime.text import MIMEText
 import base64
 from pprint import pprint
 import fast_api_logging as fl
+from pathlib import Path
+data_folder = Path(".")
 
 # hidden variables in OS
 google_client_id = os.environ.get('GOOGLE_CLIENT_ID')
@@ -352,7 +354,9 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
 
 
 def get_juneos_groups_from_position_title(file_name):
-    with open('permissions_by_orgunits/' + file_name, "r") as data:
+    file_to_open = data_folder / 'permissions_by_orgunits' / file_name
+    # with open('permissions_by_orgunits/' + file_name, "r") as data:
+    with open(file_to_open, "r") as data:
         groups_sales = json.loads(data.read())
         return groups_sales
 
@@ -603,7 +607,7 @@ def notion_search_for_role(position_title, jira_key):
         print("child_roles_ids: ", len(child_roles_ids))  # сколько чайлд ролей
 
         roles_tree = f'[{role_name}|{role_url}]'  # чтобы увидеть наглядно дерево ролей
-        a = '----'
+        dashes = '----'
         i = 0
         while True:
             i += 1
@@ -625,7 +629,7 @@ def notion_search_for_role(position_title, jira_key):
                 child_role_name = get_notion_page_title(child_roles_ids[0]['id']).json()['properties']['Role/Persona name']['title'][0]['plain_text']
                 child_role_url = get_notion_page_title(child_roles_ids[0]['id']).json()['url']
 
-                roles_tree += "\n" + a * i + f"{child_role_name} [{child_role_url}]"
+                roles_tree += "\n" + dashes * i + f"{child_role_name} [{child_role_url}]"
                 print('There are linked child roles!')
                 set_of_permissions_by_each_child = []  # создаем список содержащий списки пермиссий для каждого чайлда
 
@@ -756,14 +760,17 @@ def get_notion_page_title(page_id):
 
 
 def fetching_params_from_file(filename_contains: str, jsonvalue: str, jira_key: str, position_title: str):
-    directory = f".\\roles_configs\\{jira_key}\\{position_title}"
+    # directory = f".\\roles_configs\\{jira_key}\\{position_title}"
+    directory = data_folder / 'roles_configs' / jira_key / position_title
     # print(directory)
     for item in os.listdir(directory):
         # print(os.listdir(directory))
         # print(item)
         if os.path.isfile(os.path.join(directory, item)):  # creating a list of files in the directory
             if re.search(filename_contains, item):  # searching for a jsonvalue file in the directory
-                with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{item}") as file:
+                file_to_open = data_folder / "roles_configs" / jira_key / position_title / item
+                # with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{item}") as file:
+                with open(file_to_open) as file:
                     try:
                         organizational_unit = json.loads(file.read())
                         if jsonvalue in organizational_unit:
@@ -784,7 +791,8 @@ def fetching_params_from_file(filename_contains: str, jsonvalue: str, jira_key: 
 
 
 def checking_config_for_service_existence(position_title, jira_key):
-    directory = f".\\roles_configs\\{jira_key}\\{position_title}"
+    # directory = f".\\roles_configs\\{jira_key}\\{position_title}"
+    directory = data_folder / 'roles_configs' / jira_key / position_title
     items_list = []
     # print(directory)
     for item in os.listdir(directory):
@@ -831,7 +839,9 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
     print(result)
 
     try:
-        with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{compare_by_name_permission_for_l2['compare_by_name_permission_for_l2']}_config.json", 'r') as file:
+        file_to_open = data_folder / "roles_configs" / jira_key / position_title / f"{compare_by_name_permission_for_l2['compare_by_name_permission_for_l2']}_config.json"
+        # with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{compare_by_name_permission_for_l2['compare_by_name_permission_for_l2']}_config.json", 'r') as file:
+        with open(file_to_open, 'r') as file:
             result = json.loads(file.read())
             # print()
             # print('========')
@@ -892,8 +902,8 @@ def compare_role_configs_google(current_json_object, antecedent_json_object):
                             if a_value[i].strip() not in c_value:
                                 c_value.append(a_value[i].strip())
 
-                        print('c_value:')
-                        print(c_value)
+                        # print('c_value:')
+                        # print(c_value)
                     elif type(c_value) == str:
                         c_value = a_value
                     else:
@@ -902,6 +912,7 @@ def compare_role_configs_google(current_json_object, antecedent_json_object):
     return current_json_object
 
 def compare_role_configs_juneos(current_json_object, antecedent_json_object):
+    # !!! "data_file_config" will be replaced by "permission_config[0]"
     for c_index, (c_key, c_value) in enumerate(current_json_object.items()):
         # print(c_index, c_key, c_value)
         # print(current_json_object[c_key])
@@ -972,7 +983,9 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
             relevant_config = current_json_object
 
             # запись в файл
-            with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
+            file_to_open = data_folder / "roles_configs" / jira_key / position_title / f'{config_name}_config.json'
+            # with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
+            with open(file_to_open, 'w+') as file:
                 # file.write(str(relevant_config))
                 json.dump(relevant_config, file, indent=4)
 
@@ -994,7 +1007,9 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
                     print()
 
                     if relevant_config:
-                        with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
+                        file_to_open = data_folder / "roles_configs" / jira_key / position_title / f'{config_name}_config.json'
+                        # with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
+                        with open(file_to_open, 'w+') as file:
                             # file.write(str(relevant_config)) # более корректная запись
                             json.dump(relevant_config, file, indent=4)
                     else:
@@ -1002,6 +1017,7 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
                         pass
 
                 elif config_name == 'juneos':
+                    # !!! "data_file_config" will be replaced by "permission_config[0]"
                     relevant_config = compare_role_configs_juneos(current_json_object, antecedent_json_object)
                     print()
                     print('***************This is relevant juneos config:')
@@ -1010,7 +1026,9 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
                     print()
 
                     if relevant_config:
-                        with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
+                        file_to_open = data_folder / "roles_configs" / jira_key / position_title / f'{config_name}_config.json'
+                        # with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
+                        with open(file_to_open, 'w+') as file:
                             # file.write(str(relevant_config)) # более корректная запись
                             json.dump(relevant_config, file, indent=4)
                     else:
@@ -1057,20 +1075,31 @@ def comparing_permission_from_notion_vs_config_on_disk(filename,
         print("couldn't read the permission on disc, error:", e)
         with open(filename, 'w+') as file:
             json.dump(permission_config[0], file, indent=4)
-        validation_result += f"*[{permission_name}|{permission_url}]*: successfully written.✅\n"
+        validation_result += f"*[{permission_name}|{permission_url}]*: Config successfully written.✅\n"
         print(f"Permission '{filename}' is successfully written on the disc!")
     else:
         # если смог прочитать, то пытаемся сравнить по сервисам
         if service_name == 'googleworkspace':
-            relevant_config = compare_role_configs_google(data_file_config, permission_config[0])
+            print("**********************************************")
+            print(">>>>>>>>>>>>>>>>>>>>>>>>> data_file_config:")
+            print(data_file_config)
+            print(">>>>>>>>>>>>>>>>>>>>>>>>> permission_config[0]")
+            print("")
+            print(permission_config[0])
+            print(">>>>>>>>>>>>>>>>>>>>>>>>>")
+            # !!! "data_file_config" will be replaced by "permission_config[0]"
+            relevant_config = compare_role_configs_google(permission_config[0], data_file_config)
             print('relevant_config:')
             print("сonfigs compared ✅")
             print("====================")
+            print('relevant_config for google:')
+            print(relevant_config)
+            print("**********************************************")
             with open(filename, 'w+') as file:
                 json.dump(relevant_config, file, indent=4)
 
         elif service_name == 'juneos':
-            relevant_config = compare_role_configs_juneos(data_file_config, permission_config[0])
+            relevant_config = compare_role_configs_juneos(permission_config[0], data_file_config)
             print('relevant_config:')
             print("сonfigs compared ✅")
             print("====================")

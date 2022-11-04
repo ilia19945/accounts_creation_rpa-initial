@@ -1,7 +1,8 @@
 import datetime
 import logging
 # from es_connection import client
-
+from pathlib import Path
+data_folder = Path(".")
 logger = logging.getLogger()
 
 formatter = logging.Formatter(fmt='{asctime} - {levelname} - {name} - {module}:{funcName}:{lineno} - {message}', style='{')
@@ -18,7 +19,9 @@ console_handler.setLevel('INFO')
 console_handler.setFormatter(formatter)
 
 # file logging
-file_handler = logging.FileHandler(filename=f'.\\local_logs\\{datetime.date.today().strftime("%m-%d-%Y")}.log', mode='a')
+file_to_open = data_folder / 'local_logs' / f'{datetime.date.today().strftime("%m-%d-%Y")}.log'
+# file_handler = logging.FileHandler(filename=f'.\\local_logs\\{datetime.date.today().strftime("%m-%d-%Y")}.log', mode='a')
+file_handler = logging.FileHandler(filename=file_to_open, mode='a')
 file_handler.setLevel('INFO')
 file_handler.setFormatter(formatter)
 # file_handler.addFilter(LoggingFilter()) #
