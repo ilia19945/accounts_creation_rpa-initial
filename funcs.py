@@ -12,6 +12,7 @@ import base64
 from pprint import pprint
 import fast_api_logging as fl
 from pathlib import Path
+
 data_folder = Path(".")
 
 # hidden variables in OS
@@ -314,6 +315,7 @@ def juneos_devprod_authorization(dev_or_prod):
         #        response.json()['token']
         return response
     except Exception as e:
+        print("Error on sending a request to JuneOS:", e)
         fl.error(f'Status code:{response.status_code}\n'
                  f'{response.json()}')
         return response
@@ -684,8 +686,7 @@ def notion_search_for_role(position_title, jira_key):
 
         print("roles_tree:")
         print(roles_tree)
-        send_jira_comment("Roles Tree:\n"
-                          f"{roles_tree}",jira_key)
+        send_jira_comment(roles_tree, jira_key)
         print('Complete set of permissions:')
         pprint(permissions_for_persona, indent=2)
         print('=============================================')
@@ -908,6 +909,7 @@ def compare_role_configs_google(current_json_object, antecedent_json_object):
                         print(f'A different value type is received: '
                               f'{c_value} - {type(c_value)}')
     return current_json_object
+
 
 def compare_role_configs_juneos(current_json_object, antecedent_json_object):
     # !!! "data_file_config" will be replaced by "permission_config[0]"
