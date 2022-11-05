@@ -520,8 +520,9 @@ def check_role_permissions(role_title, jira_key):
         # trying to create a directory for this role:
         # path = os.path.join(f".\\roles_configs\\{jira_key}", role_title)
         path = data_folder / 'roles_configs' / jira_key / role_title
-        mode = 0o666
-        os.makedirs(path, mode)
+        # mode = 0o666
+        # os.makedirs(path, mode)
+        Path(path).mkdir(mode=511, parents=True,exist_ok=True)
         pages_list = ''
         for i in range(len(permissions_for_persona_list)):
             print(f"Reviewing {i + 1} / {len(permissions_for_persona_list)} permissions...for ({get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']})")
@@ -566,8 +567,9 @@ def new_check_role_and_permissions(role_title, jira_key):
         try:
             # path = os.path.join(f".\\roles_configs\\{jira_key}", position_title)
             path = data_folder / 'roles_configs' / jira_key / role_title
-            mode = 0o666
-            os.makedirs(path, mode)
+            # mode = 0o666
+            # os.makedirs(path, mode)
+            Path(path).mkdir(mode=511,parents=True,exist_ok=True)
         except Exception as e:
             print('An error while trying to create a folder:', e)
         else:
