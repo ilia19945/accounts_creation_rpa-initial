@@ -518,10 +518,7 @@ def check_role_permissions(role_title, jira_key):
         return  # ⚠️ ⚠️ ⚠️stops the main flow!
     else:
         # trying to create a directory for this role:
-        # path = os.path.join(f".\\roles_configs\\{jira_key}", role_title)
         path = data_folder / 'roles_configs' / jira_key / role_title
-        # mode = 0o666
-        # os.makedirs(path, mode)
         Path(path).mkdir(mode=511, parents=True,exist_ok=True)
         pages_list = ''
         for i in range(len(permissions_for_persona_list)):
@@ -533,7 +530,6 @@ def check_role_permissions(role_title, jira_key):
                     pages_list += f"[{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']}|" \
                                   f"{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['url']}]: Validated, Good Job! ✅ \n"
                     file_to_open = data_folder / 'roles_configs' / jira_key / role_title / get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text'] +'.json'
-                    # with open(f".\\roles_configs\\{jira_key}\\{role_title}\\{get_notion_page_title(permissions_for_persona_list[i]['id']).json()['properties']['Name']['title'][0]['plain_text']}.json", 'w+') as file:
                     with open(file_to_open, 'w+') as file:
                         file.write(str(json.dumps(result[0])))
                 else:
@@ -565,11 +561,8 @@ def new_check_role_and_permissions(role_title, jira_key):
 
         # # trying to create a directory for this role:
         try:
-            # path = os.path.join(f".\\roles_configs\\{jira_key}", position_title)
-            path = data_folder / 'roles_configs' / jira_key / role_title
-            # mode = 0o666
-            # os.makedirs(path, mode)
-            Path(path).mkdir(mode=511,parents=True,exist_ok=True)
+            path = data_folder / 'roles_configs' / jira_key / position_title
+            Path(path).mkdir(mode=511, parents=True, exist_ok=True)
         except Exception as e:
             print('An error while trying to create a folder:', e)
         else:
@@ -686,7 +679,6 @@ def new_check_role_and_permissions(role_title, jira_key):
                                 print("ITEMS LIST HAS CONFIGS!")
                                 for i in range(len(items_list)):
                                     config_name = re.split('_', items_list[i])[0]
-                                    # filename = f ".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json"
                                     filename = data_folder / 'roles_configs' / jira_key / position_title / f"{config_name}_config.json"
 
                                     print("config_name -", config_name, ", current_role_name -", current_role_name)
@@ -744,7 +736,6 @@ def new_check_role_and_permissions(role_title, jira_key):
                             else:  # если на диске нет конфигов
                                 service_name = re.split('-', current_role_name)[-1]
 
-                                # filename = f".\\roles_configs\\{jira_key}\\{position_title}\\{service_name}_config.json"
                                 filename = data_folder / 'roles_configs' / jira_key / position_title / f"{service_name}_config.json"
 
                                 with open(filename, 'w+') as file:
@@ -783,7 +774,6 @@ def new_check_role_and_permissions(role_title, jira_key):
                         permission_url = get_notion_page_title(permission_id).json()['url']
                         service_name = re.split('-', permission_name)[-1]
 
-                        # filename = f".\\roles_configs\\{jira_key}\\{position_title}\\{service_name}_config.json"
                         filename = data_folder / 'roles_configs' / jira_key / position_title / f"{service_name}_config.json"
 
                         print('permission_name:', permission_name, "; service_name:", service_name)

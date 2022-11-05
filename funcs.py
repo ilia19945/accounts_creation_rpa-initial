@@ -684,6 +684,8 @@ def notion_search_for_role(position_title, jira_key):
 
         print("roles_tree:")
         print(roles_tree)
+        send_jira_comment("Roles Tree:\n"
+                          f"{roles_tree}",jira_key)
         print('Complete set of permissions:')
         pprint(permissions_for_persona, indent=2)
         print('=============================================')
@@ -760,7 +762,6 @@ def get_notion_page_title(page_id):
 
 
 def fetching_params_from_file(filename_contains: str, jsonvalue: str, jira_key: str, position_title: str):
-    # directory = f".\\roles_configs\\{jira_key}\\{position_title}"
     directory = data_folder / 'roles_configs' / jira_key / position_title
     # print(directory)
     for item in os.listdir(directory):
@@ -769,7 +770,6 @@ def fetching_params_from_file(filename_contains: str, jsonvalue: str, jira_key: 
         if os.path.isfile(os.path.join(directory, item)):  # creating a list of files in the directory
             if re.search(filename_contains, item):  # searching for a jsonvalue file in the directory
                 file_to_open = data_folder / "roles_configs" / jira_key / position_title / item
-                # with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{item}") as file:
                 with open(file_to_open) as file:
                     try:
                         organizational_unit = json.loads(file.read())
@@ -791,7 +791,6 @@ def fetching_params_from_file(filename_contains: str, jsonvalue: str, jira_key: 
 
 
 def checking_config_for_service_existence(position_title, jira_key):
-    # directory = f".\\roles_configs\\{jira_key}\\{position_title}"
     directory = data_folder / 'roles_configs' / jira_key / position_title
     items_list = []
     # print(directory)
@@ -840,7 +839,6 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
 
     try:
         file_to_open = data_folder / "roles_configs" / jira_key / position_title / f"{compare_by_name_permission_for_l2['compare_by_name_permission_for_l2']}_config.json"
-        # with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{compare_by_name_permission_for_l2['compare_by_name_permission_for_l2']}_config.json", 'r') as file:
         with open(file_to_open, 'r') as file:
             result = json.loads(file.read())
             # print()
@@ -984,7 +982,6 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
 
             # запись в файл
             file_to_open = data_folder / "roles_configs" / jira_key / position_title / f'{config_name}_config.json'
-            # with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
             with open(file_to_open, 'w+') as file:
                 # file.write(str(relevant_config))
                 json.dump(relevant_config, file, indent=4)
@@ -1008,7 +1005,6 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
 
                     if relevant_config:
                         file_to_open = data_folder / "roles_configs" / jira_key / position_title / f'{config_name}_config.json'
-                        # with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
                         with open(file_to_open, 'w+') as file:
                             # file.write(str(relevant_config)) # более корректная запись
                             json.dump(relevant_config, file, indent=4)
@@ -1027,7 +1023,6 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
 
                     if relevant_config:
                         file_to_open = data_folder / "roles_configs" / jira_key / position_title / f'{config_name}_config.json'
-                        # with open(f".\\roles_configs\\{jira_key}\\{position_title}\\{config_name}_config.json", 'w+') as file:
                         with open(file_to_open, 'w+') as file:
                             # file.write(str(relevant_config)) # более корректная запись
                             json.dump(relevant_config, file, indent=4)
