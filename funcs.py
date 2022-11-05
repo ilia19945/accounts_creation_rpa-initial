@@ -606,7 +606,7 @@ def notion_search_for_role(position_title, jira_key):
         child_roles_ids = response.json()['results'][0]['properties']['Is parent to:']['relation']
         print("child_roles_ids: ", len(child_roles_ids))  # сколько чайлд ролей
 
-        roles_tree = f'[{role_name}|{role_url}]'  # чтобы увидеть наглядно дерево ролей
+        roles_tree = f'Roles Tree for *[{role_name}|{role_url}]*:'  # чтобы увидеть наглядно дерево ролей
         dashes = '----'
         i = 0
         while True:
@@ -629,7 +629,7 @@ def notion_search_for_role(position_title, jira_key):
                 child_role_name = get_notion_page_title(child_roles_ids[0]['id']).json()['properties']['Role/Persona name']['title'][0]['plain_text']
                 child_role_url = get_notion_page_title(child_roles_ids[0]['id']).json()['url']
 
-                roles_tree += "\n" + dashes * i + f"{child_role_name} [{child_role_url}]"
+                roles_tree += f"\n{i}." + dashes * i + f"*[{child_role_name}|{child_role_url}]*"
                 print('There are linked child roles!')
                 set_of_permissions_by_each_child = []  # создаем список содержащий списки пермиссий для каждого чайлда
 
