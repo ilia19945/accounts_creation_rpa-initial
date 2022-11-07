@@ -5,7 +5,7 @@ from pprint import pprint
 import re
 import boto3
 
-from config import email_cc_list
+from config import email_cc_list, google_license_skus
 from funcs import gmail_app_password, send_jira_comment, notion_search_for_role, notion_search_for_permission_block_children, get_notion_page_title, compare_permissions_by_name, full_compare_by_name_and_permissions_with_file, checking_config_for_service_existence, compare_role_configs_google, \
     comparing_permission_from_notion_vs_config_on_disk, create_google_user_req, assign_google_license, adding_user_to_google_group, adding_to_junehomes_dev_calendar, create_elk_user, adding_jira_cloud_user, compare_role_configs_juneos
 from celery import Celery
@@ -78,12 +78,12 @@ def async_google_account_license_groups_calendar_creation(
         # proceeding to licence assignment according the department.
 
         if organizational_unit == 'Sales' and role_title != 'Vendor Tour Manager':
-            assigned_license = assign_google_license('1010020020', suggested_email)
+            assigned_license = assign_google_license(google_license_skus["Google Workspace Business Plus"], suggested_email)
 
             if assigned_license[0] < 300:  # if success
                 send_jira_comment(
-                    "(2/3) *Google Workspace Enterprise Plus* license, successfully assigned!", jira_key)
-                fl.info("Google Workspace Enterprise Plus license, assigned")
+                    f"(2/3) *{list(google_license_skus)[1]}* license, successfully assigned!", jira_key)
+                fl.info(f"{list(google_license_skus)[1]} license, assigned")
 
             elif assigned_license[0] == 412:
                 send_jira_comment(f"Not enough licenses. Google error:\n{assigned_license[1]}", jira_key)
@@ -99,11 +99,11 @@ def async_google_account_license_groups_calendar_creation(
 
         # other department
         else:
-            assigned_license = assign_google_license('Google-Apps-Unlimited', suggested_email)
+            assigned_license = assign_google_license(google_license_skus["G Suite Business"], suggested_email)
 
             if assigned_license[0] < 300:  # if success
-                send_jira_comment("(2/3) *G Suite Business* license, successfully assigned!", jira_key)
-                fl.info("G Suite Business license, assigned!")
+                send_jira_comment(f"(2/3) *{list(google_license_skus)[0]}* license, successfully assigned!", jira_key)
+                fl.info(f"{list(google_license_skus)[0]} license, assigned!")
 
             elif assigned_license[0] == 412:
                 send_jira_comment(f"Not enough licenses. Google error:\n{assigned_license[1]}", jira_key)
