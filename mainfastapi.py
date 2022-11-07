@@ -700,7 +700,7 @@ if __name__ == 'mainfastapi':
             print(jira_description)
 
             position_title = jira_description[jira_description.index('*Position title*') + 1]
-            role_title = jira_description[jira_description.index('*Role title*') + 1]
+            # role_title = jira_description[jira_description.index('*Role title*') + 1]
             first_name = jira_description[jira_description.index('*First name*') + 1]
             last_name = jira_description[jira_description.index('*Last name*') + 1]
 
@@ -874,7 +874,7 @@ if __name__ == 'mainfastapi':
             elif jira_new_status == "Check Role and Permissions":
                 """Checking for filling out RoR table"""
                 check_role_permissions.apply_async(
-                    (role_title,
+                    (position_title,
                      jira_key),
                     queue='other')
 
