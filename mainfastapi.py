@@ -512,7 +512,7 @@ if __name__ == 'mainfastapi':
                                             f'*{juneos_user.json()["errors"]}*',
                                             jira_key=jira_key)
 
-                elif organizational_unit in ['Sales', 'Resident Experience', 'Performance Marketing']:
+                elif organizational_unit in ['Sales', 'Resident Experience', 'Performance Marketing', 'Finance', 'Leadership', 'Product', 'Brand Marketing']:
                     print(f"organizational_unit [{organizational_unit}] received.")
                     try:
                         groups = f.fetching_params_from_file(
@@ -532,6 +532,9 @@ if __name__ == 'mainfastapi':
                                 groups = f.get_juneos_groups_from_position_title(file_name='groups_resident_experience.json')[role_title]
                             elif organizational_unit == 'Performance Marketing':
                                 groups = f.get_juneos_groups_from_position_title(file_name='groups_performance_marketing.json')[role_title]
+                            else:
+                                groups = f.get_juneos_groups_from_position_title(file_name=f'groups_{organizational_unit}.json')[role_title]
+
 
                             fl.info(f"the group was found! \n{str(groups)}")
 
