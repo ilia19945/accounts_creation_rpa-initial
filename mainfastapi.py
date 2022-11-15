@@ -11,7 +11,7 @@ import funcs as f
 import fast_api_logging as fl
 from tasks import send_gmail_message, create_amazon_user, check_role_permissions, new_check_role_and_permissions, async_google_account_license_groups_calendar_creation
 
-from fastapi import Body, FastAPI, HTTPException, Query
+from fastapi import Body, FastAPI, HTTPException, Query, Request
 from typing import Optional
 from jinja2 import Environment, FileSystemLoader
 
@@ -105,9 +105,17 @@ if __name__ == 'mainfastapi':
             fl.error('Received a random request')
             return 'Why are you on this page?=.='
 
+    # didn't make up on how to use it
+    # @app.middleware("http")
+    # async def check(request: Request, next_call):
+    #     # do something
+    #     response = await next_call(request)
+    #     # do something for example is there any speical
+    #     return response
+
 
     @app.post("/webhook", status_code=200)  # Jira webhook, tag "employee/contractor hiring"
-    async def main_flow(body: dict = Body(...)):
+    async def employee_contract_main_flow(body: dict = Body(...)):
         global jira_key
         jira_key = body['issue']['key']
 
@@ -687,7 +695,7 @@ if __name__ == 'mainfastapi':
 
 
     @app.post("/maintenance_hiring", status_code=200)  # Jira webhook, tag "maintenance employee hiring"
-    async def main_flow(body: dict = Body(...)):
+    async def maintenance_main_flow(body: dict = Body(...)):
 
         jira_key = body['issue']['key']
 
@@ -876,12 +884,21 @@ if __name__ == 'mainfastapi':
 
             elif jira_new_status == "Check Role and Permissions":
                 """Checking for filling out RoR table"""
-                check_role_permissions.apply_async(
+                new_check_role_and_permissions.apply_async(
                     (position_title,
                      jira_key),
                     queue='other')
 
-            elif jira_new_status not in ["To Do", "Done", "In Progress", "Rejected", "Waiting for dev", "Waiting for reply"]:
+            elif jira_new_status in ["Done", "Rejected"]:
+                try:
+                    # path = os.path.join(f".\\roles_configs", jira_key)
+                    path = data_folder / 'roles_configs' / jira_key
+                    if os.path.exists(path) and os.path.isdir(path):
+                        shutil.rmtree(path)
+                except Exception as e:
+                    print("Exception:", e)
+
+            elif jira_new_status not in ["In Progress", "Rejected", "Waiting for dev", "Waiting for reply"]:
                 f.send_jira_comment('*Creating a JuneOS account* is the only available status for the maintenance employees.',
                                     jira_key=jira_key)
             else:

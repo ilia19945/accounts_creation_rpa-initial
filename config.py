@@ -31,10 +31,12 @@ roles_dict = {
             "Support Onboarding Agent": "tea_17h1g",
             "Resolutions Team Agent": "tea_17upw",
             "Support Team Leader": "tea_17utg",
-            "Landlord Team Agent": "tea_17uv8"
+            "Landlord Team Agent": "tea_17uv8",
+            "Collections Member": "tea_18q84",
             }
 
 google_license_skus = {
     "G Suite Business": "Google-Apps-Unlimited",
-    "Google Workspace Business Plus": "1010020025"
+    "Google Workspace Enterprise Plus": "1010020020",
+    # "Google Workspace Business Plus": "1010020025"
 }
