@@ -845,6 +845,7 @@ def new_check_role_and_permissions(role_title, jira_key):
                         permission_name = get_notion_page_title(permission_id).json()['properties']['Name']['title'][0]['plain_text']
                         permission_url = get_notion_page_title(permission_id).json()['url']
                         service_name = re.split('-', permission_name)[-1]
+
                         filename = data_folder / 'roles_configs' / jira_key / position_title / f"{service_name}_config.json"
 
                         try:
