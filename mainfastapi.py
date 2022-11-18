@@ -737,8 +737,11 @@ if __name__ == 'mainfastapi':
             if unix_countdown_time <= 0:
                 unix_countdown_time = 0
 
-            groups = f.get_juneos_groups_from_position_title(file_name='groups_maintenance.json')[position_title]
-            print(f"the group was found! \n{str(groups)}")
+            try:
+                groups = f.get_juneos_groups_from_position_title(file_name='groups_maintenance.json')[position_title]
+                print(f"the group was found! \n{str(groups)}")
+            except Exception as e:
+                print('Error on trying to get groups from file:', e)
 
             fl.info(f"time for task countdown in hours: {str(unix_countdown_time / 3600)}")
             if jira_new_status == 'Create a JuneOS account':
