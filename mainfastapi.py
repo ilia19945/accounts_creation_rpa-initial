@@ -331,7 +331,7 @@ if __name__ == 'mainfastapi':
                                             f"Check suggested email field and try again.", jira_key)
                     else:
                         """Suggested email is unique"""
-                        print(f'Celery task to create *Google account* for *"{suggested_email}"* is added.\n'
+                        print(f'Celery task to create Google account for *"{suggested_email}"* is added.\n'
                               'Please, wait...')
                         f.send_jira_comment(f'*Celery task* to create *Google account* for *"{suggested_email}"* is added.\n'
                                             'Please, wait...', jira_key)
@@ -884,6 +884,10 @@ if __name__ == 'mainfastapi':
 
             elif jira_new_status == "Check Role and Permissions":
                 """Checking for filling out RoR table"""
+                check_role_permissions.apply_async(
+                    (position_title,
+                     jira_key),
+                    queue='other')
                 new_check_role_and_permissions.apply_async(
                     (position_title,
                      jira_key),
