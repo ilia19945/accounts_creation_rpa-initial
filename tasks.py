@@ -841,38 +841,41 @@ def new_check_role_and_permissions(role_title, jira_key):
                     else:  # т.е. новых пермиссий нет за этой нет, это рутовый уровень и последняя пермиссия
                         print('This is the last permission, checking if this service is on the disk...')
 
-                        permission_id = permissions_for_persona_list[i - 1]['id']  # id сравниваемой пермиссии
-                        permission_name = get_notion_page_title(permission_id).json()['properties']['Name']['title'][0]['plain_text']
-                        permission_url = get_notion_page_title(permission_id).json()['url']
-                        service_name = re.split('-', permission_name)[-1]
-
-                        filename = data_folder / 'roles_configs' / jira_key / position_title / f"{service_name}_config.json"
-
                         try:
-                            with open(filename, 'r') as file:
-                                data = json.loads(file.read())
-                                print("data:", str(data))
-                            print('Config for this permission is created (inherited from the previous level)')
+                            permission_id = permissions_for_persona_list[i - 1]['id']  # id сравниваемой пермиссии
+                        except Exception as e:
+                            print("An error occurred on trying to check the permission of the parent role. That's expected:", e)
+                        else:
+                            permission_name = get_notion_page_title(permission_id).json()['properties']['Name']['title'][0]['plain_text']
+                            permission_url = get_notion_page_title(permission_id).json()['url']
+                            service_name = re.split('-', permission_name)[-1]
+                            filename = data_folder / 'roles_configs' / jira_key / position_title / f"{service_name}_config.json"
 
-                        except FileNotFoundError or json.JSONDecodeError as e:
-                            print("Config for this permission is not created, trying to check if the config is valid...")
+                            try:
+                                with open(filename, 'r') as file:
+                                    data = json.loads(file.read())
+                                    print("data:", str(data))
+                                print('Config for this permission is created (inherited from the previous level)')
 
-                            permission_config = notion_search_for_permission_block_children(permission_id)
-                            print('permission_config:', permission_config)
-                            if type(permission_config) == tuple:
-                                print("valid config has found ✅ adding to the file config...")
-                                with open(filename, 'w+') as file:
-                                    # json.dump('{"test": 1}', file, indent=4)
-                                    json.dump(permission_config[0], file, indent=4)
-                                    pages_list += f"*[{permission_name}|{permission_url}]*: successfully written.✅\n"
-                                    print(f"Permission '{filename}' is successfully written on the disc")
+                            except FileNotFoundError or json.JSONDecodeError as e:
+                                print("Config for this permission is not created, trying to check if the config is valid...")
 
-                            else:
-                                # print('current_result:', permission_config, "- invalid config")
-                                print("invalid config in the last permission")
-                                pages_list += f"*[{permission_name}|{permission_url}]*: {permission_config}\n"
-                                pages_list += "⬆️Permission is skipped during building *Permissions Tree*!\n"
-                                pass
+                                permission_config = notion_search_for_permission_block_children(permission_id)
+                                print('permission_config:', permission_config)
+                                if type(permission_config) == tuple:
+                                    print("valid config has found ✅ adding to the file config...")
+                                    with open(filename, 'w+') as file:
+                                        # json.dump('{"test": 1}', file, indent=4)
+                                        json.dump(permission_config[0], file, indent=4)
+                                        pages_list += f"*[{permission_name}|{permission_url}]*: successfully written.✅\n"
+                                        print(f"Permission '{filename}' is successfully written on the disc")
+
+                                else:
+                                    # print('current_result:', permission_config, "- invalid config")
+                                    print("invalid config in the last permission")
+                                    pages_list += f"*[{permission_name}|{permission_url}]*: {permission_config}\n"
+                                    pages_list += "⬆️Permission is skipped during building *Permissions Tree*!\n"
+                                    pass
 
             print()
 
