@@ -808,6 +808,7 @@ def new_check_role_and_permissions(role_title, jira_key):
                             if service_name in permissions_history_check:
                                 print(f'"{service_name}" found in {permissions_history_check}, skipping - was already updated...')
                                 continue
+
                             else:
                                 print(service_name, "<->", items_list[i], "comparing...")
                                 if re.findall(service_name, items_list[i]):  # если они одинаковые
