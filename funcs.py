@@ -859,11 +859,11 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
     if level == 1:  # это сравнение пермиссий current level
         if type(result) == tuple:
             json_object = result[0]  # это уже пермиcсии сами если все ок
-            pages_list += f"*[{permission_name}|{permission_url}]* : Validated. ✅\n"
+            pages_list += f"[level: 1] *[{permission_name}|{permission_url}]* : Validated. ✅\n"
 
         elif type(result) == dict:
             json_object = result
-            pages_list += f"+––> *[{permission_name}|{permission_url}]*: Inherited from the config on the disk. ✅\n"
+            pages_list += f"[level: 1] +––> *[{permission_name}|{permission_url}]*: Inherited from the config on the disk. ✅\n"
 
         else:
             json_object = False  # если валидация не прошла
@@ -874,11 +874,11 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
         if type(result) == tuple:
             json_object = result[0]  # это уже пермиcсии, если все ок
 
-            pages_list += f"+––> *[{permission_name}|{permission_url}]*: Validated. ✅\n"
+            pages_list += f"[level: 2] +––> *[{permission_name}|{permission_url}]*: Validated. ✅\n"
 
         elif type(result) == dict:
             json_object = result
-            pages_list += f"+––> *[{permission_name}|{permission_url}]*: Inherited from the config on the disk. ✅\n"
+            pages_list += f"[level: 2] +––> *[{permission_name}|{permission_url}]*: Inherited from the config on the disk. ✅\n"
 
         else:
             json_object = False  # если валидация не прошла
