@@ -141,7 +141,7 @@ if __name__ == 'mainfastapi':
             try:
                 organizational_unit = f.fetching_params_from_file(
                     filename_contains="googleworkspace",
-                    jsonvalue='Groups',
+                    jsonvalue='Organizational Unit',
                     position_title=role_title,
                     jira_key=jira_key
                 )
