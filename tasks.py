@@ -854,7 +854,6 @@ def new_check_role_and_permissions(role_title, jira_key):
                     pass
 
             print()
-
             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             print(pages_list)
             print()

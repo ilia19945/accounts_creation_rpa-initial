@@ -1051,7 +1051,6 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
         # print('--------INNER-ITER--------')
     return relevant_config, pages_list
 
-
 def comparing_permission_from_notion_vs_config_on_disk(filename,
                                                        permission_config,
                                                        permission_name,
