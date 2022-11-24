@@ -147,9 +147,8 @@ if __name__ == 'mainfastapi':
                 )
                 print('the value is taken from config on Notion')
             except Exception as e:
-                f.send_jira_comment('Couldn\'t take the *Organizational unit* from *googleworkspace* file config.\n'
-                                    f'Error: [{e}]\n'
-                                    f'Trying to take the value from ticket description...', jira_key)
+                print('Couldn\'t take the *Organizational unit* from *googleworkspace* file config.\n'
+                       f'Error: [{e}]\nTrying to take the value from ticket description...')
                 try:
                     organizational_unit = jira_description[jira_description.index('*Organizational unit*') + 1]
                     print('the value is taken from jira description')
