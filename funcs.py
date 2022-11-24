@@ -859,11 +859,11 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
     if level == 1:  # это сравнение пермиссий current level
         if type(result) == tuple:
             json_object = result[0]  # это уже пермиcсии сами если все ок
-            pages_list += f"*[{permission_name}|{permission_url}]* : Validated. ✅\n"
+            pages_list += f"[level: 1] *[{permission_name}|{permission_url}]* : Validated. ✅\n"
 
         elif type(result) == dict:
             json_object = result
-            pages_list += f"+––> *[{permission_name}|{permission_url}]*: Inherited from the config on the disk. ✅\n"
+            pages_list += f"[level: 1] +––> *[{permission_name}|{permission_url}]*: Inherited from the config on the disk. ✅\n"
 
         else:
             json_object = False  # если валидация не прошла
@@ -874,14 +874,14 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
         if type(result) == tuple:
             json_object = result[0]  # это уже пермиcсии, если все ок
 
-            pages_list += f"+––> *[{permission_name}|{permission_url}]*: Validated. ✅\n"
+            pages_list += f"[level: 2] +––> *[{permission_name}|{permission_url}]*: Validated. ✅\n"
 
         elif type(result) == dict:
             json_object = result
-            pages_list += f"+––> *[{permission_name}|{permission_url}]*: Inherited from the config on the disk. ✅\n"
+            pages_list += f"[level: 2] +––> *[{permission_name}|{permission_url}]*: Inherited from the config on the disk. ✅\n"
 
         else:
-            json_object = False  # это уже это если валидация не прошла
+            json_object = False  # если валидация не прошла
             pages_list += f"+––> *[{permission_name}|{permission_url}]*: {result}\n"
 
     return pages_list, permission_name, json_object
@@ -977,7 +977,7 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
         print('this is antecedent_json_object:', antecedent_json_object)
         print('this is current_json_object:', current_json_object)
         if not antecedent_json_object:  # writing down only the current result. Skipping antecedent_json_object because it's invalid.
-            print('there is an error in the document')
+            print('there is an error in the antecedent config...')
 
             pages_list += "–––––––– ⬆️Permission is skipped during building *Permissions Tree*! Fix the error, otherwise the permissions tree may not be complete.\n"
             relevant_config = current_json_object
@@ -985,18 +985,18 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
             # запись в файл
             file_to_open = data_folder / "roles_configs" / jira_key / position_title / f'{config_name}_config.json'
             with open(file_to_open, 'w+') as file:
-                # file.write(str(relevant_config))
                 json.dump(relevant_config, file, indent=4)
+            print(f'"{config_name}_config.json" is successfully written')
 
         elif antecedent_json_object == "incomparable_service":  # когда сервис для сравниваемой пермиссии отличается - скипаем.
             print(f'The permission - "{antecedent_role_name}" cannot be compared with  service - "{config_name}", skipping ...')
-            pass
+            continue
 
         else:
             print('antecedent_role_name is correct')
             if re.findall(config_name, antecedent_role_name):  # internal config of antecedent_role
                 if config_name == 'googleworkspace':
-                    print(f"сравниваем '{config_name}' и '{antecedent_role_name}'")
+                    print(f"Comparing '{config_name}' и '{antecedent_role_name}'")
                     # comparing current role json object vs. antecedent role json object for googleworkspace
                     relevant_config = compare_role_configs_google(current_json_object, antecedent_json_object)
                     print()
@@ -1008,7 +1008,6 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
                     if relevant_config:
                         file_to_open = data_folder / "roles_configs" / jira_key / position_title / f'{config_name}_config.json'
                         with open(file_to_open, 'w+') as file:
-                            # file.write(str(relevant_config)) # более корректная запись
                             json.dump(relevant_config, file, indent=4)
                     else:
                         print('relevant config: ', relevant_config)
@@ -1043,7 +1042,7 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
                     pass
                 else:
                     relevant_config = f'received permissions for: {config_name}'
-                    print(f'received permissions for: {config_name}')
+                    print(f'received permissions for: {config_name}.. Don\'t know how to compare... skipping')
             else:
                 relevant_config = f'else: {antecedent_role_name}'
                 print('else:', antecedent_role_name)
