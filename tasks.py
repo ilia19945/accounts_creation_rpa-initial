@@ -562,8 +562,8 @@ def new_check_role_and_permissions(role_title, jira_key):
     print('+++++++++++++++++++')
     if len(permissions_for_persona_list) == 0:  # если пермиссии для персоны не добавлены!
         print(f'Permissions are not added for {position_title}!')
-        # send_jira_comment(f'Permissions are not added for *{position_title}* position ❌', jira_key=jira_key)
-        # return  # ⚠️ ⚠️ ⚠️stops the main flow!
+        send_jira_comment(f'Permissions are not added for *{position_title}* position ❌', jira_key=jira_key)
+        return  # ⚠️ ⚠️ ⚠️stops the main flow!
     else:  # if
         next_level_checker = False
 
