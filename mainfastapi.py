@@ -601,7 +601,7 @@ if __name__ == 'mainfastapi':
                                    f"*[LINK|https://junehomes.com/december_access/staff/agent/add/]*"
                         elif ("success" in role_title.strip().lower() or "sales" in role_title.strip().lower()) and organizational_unit == "Sales":
                             link = f"*Don\'t forget to add user to *Lead Owners* on juneOS.*\n" \
-                                   f"*[LINK|https://junehomes.com/december_access/staff/agent/add/]*\n" \
+                                   f"*[LINK|https://junehomes.com/december_access/staff/team/add/]*\n" \
                                    f"Remember we use agent arn for amazon (not queue arn) since 1st Dec. 2022."
                         else:
                             link = ""
