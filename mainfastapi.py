@@ -589,10 +589,28 @@ if __name__ == 'mainfastapi':
                             countdown=round(unix_countdown_time) + 120
                         )
                         fl.info(f"email 'Access to JuneOS property management system' will be sent in: {round(unix_countdown_time / 3600)}*, \n")
+
+                        if role_title == "Property manager":
+                            link = f"*Don\'t forget to add user to *{role_title}s* on juneOS.*\n"\
+                                  f"*[LINK|https://junehomes.com/december_access/staff/propertymanager/add/]*"
+                        elif role_title == "City manager":
+                            link = f"*Don\'t forget to add user to *{role_title}s* on juneOS.*\n" \
+                                   f"*[LINK|https://junehomes.com/december_access/staff/citymanager/add/]*"
+                        elif "support" in role_title.strip().lower() and organizational_unit in ["Resident Experience", "Resident Experience (incl. Design and Launches)"]:
+                            link = f"*Don\'t forget to add user to *Agents* on juneOS.*\n" \
+                                   f"*[LINK|https://junehomes.com/december_access/staff/agent/add/]*"
+                        elif ("success" in role_title.strip().lower() or "sales" in role_title.strip().lower()) and organizational_unit == "Sales":
+                            link = f"*Don\'t forget to add user to *Lead Owners* on juneOS.*\n" \
+                                   f"*[LINK|https://junehomes.com/december_access/staff/agent/add/]*\n" \
+                                   f"Remember we use agent arn for amazon (not queue arn) since 1st Dec. 2022."
+                        else:
+                            link = ""
+
                         f.send_jira_comment("*JuneOS* user created.\n"
-                                            f"Username: *{suggested_email}*, \n"
+                                            f"Username: *{personal_email.strip()}*, \n"
                                             f"*[User link|https://junehomes.com/december_access/users/user/{juneos_user.json()['user']['id']}/change/]*.\n"
-                                            f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
+                                            f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.\n"
+                                            f"{link}",
                                             jira_key=jira_key)
                         try:
 
@@ -824,7 +842,7 @@ if __name__ == 'mainfastapi':
                         elif position_title == "City manager":
                             link = "citymanager/add/"
                         else:
-                            link = "/"
+                            link = ""
 
                         f.send_jira_comment("*JuneOS* user created.\n"
                                             f"Username: *{personal_email}*, \n"

@@ -4,7 +4,6 @@
 email_cc_list = ['idelia@junehomes.com',
                  'ivan@junehomes.com',
                  'artyom@junehomes.com',
-                 'maria.zhuravleva@junehomes.com',
                  'zoi@junehomes.com',
                  'glykeria@junehomes.com'
                  ]
