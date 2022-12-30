@@ -588,7 +588,7 @@ def notion_search_for_role(position_title, jira_key):
 
     response = requests.request("POST", url, headers=headers, data=payload)
 
-    # pprint(response.json(), indent=1)
+    pprint(response.json(), indent=1)
     try:
         print(len(response.json()['results']))
     except Exception as e:
