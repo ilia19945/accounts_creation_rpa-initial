@@ -1,12 +1,12 @@
 version: '3'
-
+ 
 services:
 
   app:
     container_name: account_creation_automation_app
     build: .
     ports:
-      - "80:80"
+      - "8000:8000"
     restart: "unless-stopped"
     volumes:
     - ./:/code
