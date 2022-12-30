@@ -589,6 +589,12 @@ def notion_search_for_role(position_title, jira_key):
     response = requests.request("POST", url, headers=headers, data=payload)
 
     # pprint(response.json(), indent=1)
+    try:
+        print(len(response.json()['results']))
+    except Exception as e:
+        print('No results returned.', e)
+        return False
+
 
     if len(response.json()['results']) == 0:  # if there is no role with this name
         # pprint(response.json()['results'], indent=1)

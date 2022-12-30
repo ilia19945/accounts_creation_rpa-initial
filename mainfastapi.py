@@ -106,7 +106,15 @@ if __name__ == 'mainfastapi':
             return 'User denied to confirm the permissions! Main flow is stopped!'
         else:
             fl.error('Received a random request')
-            return 'Why are you on this page?=.='
+            f.send_jira_comment(message='TEST from MAIN file', jira_key="AUS2-25")
+
+            variables = ''
+            for name, value in os.environ.items():
+                variables += "{0}: {1}".format(name, value) + "\n"
+
+
+            # return {"response": 'Why are you on this page?=.=', "test": requests.get(url='https://ya.ru').text}
+            return {"response": variables, "test": os.environ.get("JIRA_API")}
 
     # didn't make up on how to use it
     # @app.middleware("http")

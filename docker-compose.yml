@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+
+  app:
+    container_name: account_creation_automation_app
+    build: .
+    ports:
+      - "80:80"
+    restart: "unless-stopped"
+    volumes:
+    - ./:/code
+    env_file: .env
+      
+  celery:
+    container_name: aca_celery
+    build: .
+    volumes:
+    - ./:/code
+    command: celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other
+    env_file: .env
+    depends_on:
+      - redis
+    
+  flower:
+    container_name: aca_flower
+    build: .
+    ports:
+      - "5555:5555"
+    command: celery -A tasks flower --basic_auth=admin:admin
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:latest
