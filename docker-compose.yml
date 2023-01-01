@@ -14,7 +14,7 @@ services:
       
   celery:
     container_name: aca_celery
-    build: .
+    build: ./services/celery
     volumes:
     - ./:/code
     command: celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other
@@ -24,10 +24,14 @@ services:
     
   flower:
     container_name: aca_flower
-    build: .
+    build: ./services/flower
+    volumes:
+    - ./:/code
     ports:
       - "5555:5555"
     command: celery -A tasks flower --basic_auth=admin:admin
+    
+    env_file: .env
     depends_on:
       - redis
 
