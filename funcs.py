@@ -13,6 +13,8 @@ from pprint import pprint
 import fast_api_logging as fl
 from pathlib import Path
 
+import funcs
+
 data_folder = Path(".")
 
 # hidden variables in OS
@@ -63,6 +65,7 @@ def get_new_access_token():
                                    '+https://www.googleapis.com/auth/gmail.modify' \
                                    '+https://www.googleapis.com/auth/gmail.compose' \
                                    '+https://www.googleapis.com/auth/gmail.send' \
+                                   '+https://www.googleapis.com/auth/admin.directory.userschema' \
                                    '+https://www.googleapis.com/auth/calendar&' \
                                    'access_type=offline&' \
                                    'include_granted_scopes=true&' \
@@ -595,7 +598,6 @@ def notion_search_for_role(position_title, jira_key):
         print('No results returned.', e)
         return False
 
-
     if len(response.json()['results']) == 0:  # if there is no role with this name
         # pprint(response.json()['results'], indent=1)
         # print(f'the value "{role_title}" does not exist in column "Role/Persona name"')
@@ -1113,3 +1115,23 @@ def comparing_permission_from_notion_vs_config_on_disk(filename,
         validation_result += f"*[{permission_name}|{permission_url}]* : Validated. ✅\n"
 
     return validation_result
+
+
+def allow_zendesk_login(user_email, access_token):
+    url = f"https://admin.googleapis.com/admin/directory/v1/users/{user_email}?projection=full"
+
+    payload = json.dumps({
+        "customSchemas": {
+            "Additional_details": {
+                "Zendesk_role": "agent"
+            }
+        }
+    })
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("PATCH", url, headers=headers, data=payload)
+    return response
+

@@ -4,10 +4,10 @@ import time
 from pprint import pprint
 import re
 import boto3
+import requests
 
 from config import email_cc_list, google_license_skus
-from funcs import gmail_app_password, send_jira_comment, notion_search_for_role, notion_search_for_permission_block_children, get_notion_page_title, compare_permissions_by_name, full_compare_by_name_and_permissions_with_file, checking_config_for_service_existence, compare_role_configs_google, \
-    comparing_permission_from_notion_vs_config_on_disk, create_google_user_req, assign_google_license, adding_user_to_google_group, adding_to_junehomes_dev_calendar, create_elk_user, adding_jira_cloud_user, compare_role_configs_juneos
+from funcs import *
 from celery import Celery
 
 from email.mime.text import MIMEText
@@ -875,6 +875,46 @@ def new_check_role_and_permissions(role_title, jira_key):
         print('jira_key', jira_key)
         send_jira_comment(message=e, jira_key=jira_key)
         print('after comment')
+
+
+@celery_app.task(serializer='json')
+def check_zendesk_login(user_email, access_token, jira_key):
+    url = f"https://admin.googleapis.com/admin/directory/v1/users/{user_email}?projection=full"
+
+    payload = {}
+    headers = {
+        'Authorization': f'Bearer {access_token}'}
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    try:
+        print(response.json()['customSchemas']['Additional_details']['Zendesk_role'])
+        print('Parameter already Exist')
+        send_jira_comment(message='A necessary parameter is already set.\n '
+                                  'The user may now go to [Zendesk Login page|https://junehomes.zendesk.com/auth/v2/login] and login through "I\'m an agent" -> via login and password of his/her work account.\n\n'
+                                  'P.S. Make sure that the user has a correct Org.unit on Google Workspace, that allows to use Zendesk SAML.',
+                          jira_key=jira_key)
+        return {"result": "Fail",
+                "details":"Parameter already Exist"}
+    except KeyError as e:
+        print(e, 'meaning that the parameter "agent" is not assigned, trying to assign...')
+        response = allow_zendesk_login(user_email, access_token)
+        print(response.json())
+        print('The user is assigned with a necessary param, Now he/she needs to go to https://junehomes.zendesk.com/auth/v2/login and click "I\'m an agent" -> login using his/her work account')
+        send_jira_comment(message='A necessary parameter was set.\n '
+                                         'The user may now go to [Zendesk Login page|https://junehomes.zendesk.com/auth/v2/login] and login through "I\'m an agent" -> via login and password of his/her work account.\n\n'
+                                         'P.S. Make sure that the user has a correct Org.unit on Google Workspace, that allows to use Zendesk SAML.',
+                                 jira_key=jira_key)
+        return {"result": "Success",
+                "details":"Parameter already Exist"}
+    except Exception as e:
+        print(e)
+        send_jira_comment(message=f'An error occurred when trying to provide an access to Zendesk:\n{e}',
+                                 jira_key=jira_key)
+        return {"result": "Exception",
+                "details": e}
+
+
     # pprint(len(list(reversed(permissions_for_persona_list))))
 
 # revoke tasks  https://docs.celeryq.dev/en/stable/userguide/workers.html#revoke-revoking-tasks

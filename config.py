@@ -2,7 +2,7 @@
 
 # the list of users who receives a copy of emails
 email_cc_list = ['idelia@junehomes.com',
-                 'ivan@junehomes.com',
+                 'moiz@junehomes.com',
                  'artyom@junehomes.com',
                  'zoi@junehomes.com',
                  'glykeria@junehomes.com'
