@@ -12,15 +12,15 @@ import time
 from datetime import datetime
 import funcs as f
 import fast_api_logging as fl
-from tasks import send_gmail_message, create_amazon_user, check_role_permissions, new_check_role_and_permissions, async_google_account_license_groups_calendar_creation
+from tasks import send_gmail_message, create_amazon_user, check_role_permissions, new_check_role_and_permissions, async_google_account_license_groups_calendar_creation, check_zendesk_login
 
 from fastapi import Body, FastAPI, HTTPException, Query, Request
 from typing import Optional
 from jinja2 import Environment, FileSystemLoader
 
 from pathlib import Path
-data_folder = Path(".")
 
+data_folder = Path(".")
 
 # run server: uvicorn mainfastapi:app --reload --port 80
 # run ngrok: -> ngrok http 80
@@ -108,6 +108,7 @@ if __name__ == 'mainfastapi':
             fl.error('Received a random request')
             return {"response": 'Why are you on this page?=.='}
 
+
     # didn't make up on how to use it
     # @app.middleware("http")
     # async def check(request: Request, next_call):
@@ -115,7 +116,6 @@ if __name__ == 'mainfastapi':
     #     response = await next_call(request)
     #     # do something for example is there any speical
     #     return response
-
 
     @app.post("/webhook", status_code=200)  # Jira webhook, tag "employee/contractor hiring"
     async def employee_contract_main_flow(body: dict = Body(...)):
@@ -148,7 +148,7 @@ if __name__ == 'mainfastapi':
                 print('the value is taken from config on Notion')
             except Exception as e:
                 print('Couldn\'t take the *Organizational unit* from *googleworkspace* file config.\n'
-                       f'Error: [{e}]\nTrying to take the value from ticket description...')
+                      f'Error: [{e}]\nTrying to take the value from ticket description...')
                 try:
                     organizational_unit = jira_description[jira_description.index('*Organizational unit*') + 1]
                     print('the value is taken from jira description')
@@ -535,7 +535,7 @@ if __name__ == 'mainfastapi':
                             pass
                     except Exception as e:
                         print(f"Couldn't get the value from JuneOS file config. Error: {e}")
-                        try:   # BASED ON THE OLD DESCRIPTION
+                        try:  # BASED ON THE OLD DESCRIPTION
                             if organizational_unit == 'Sales':
                                 groups = f.get_juneos_groups_from_position_title(file_name='groups_sales.json')[role_title]
                             elif organizational_unit == 'Resident Experience':
@@ -544,7 +544,6 @@ if __name__ == 'mainfastapi':
                                 groups = f.get_juneos_groups_from_position_title(file_name='groups_performance_marketing.json')[role_title]
                             else:
                                 groups = f.get_juneos_groups_from_position_title(file_name=f'groups_{organizational_unit}.json')[role_title]
-
 
                             fl.info(f"the group was found! \n{str(groups)}")
 
@@ -591,8 +590,8 @@ if __name__ == 'mainfastapi':
                         fl.info(f"email 'Access to JuneOS property management system' will be sent in: {round(unix_countdown_time / 3600)}*, \n")
 
                         if role_title == "Property manager":
-                            link = f"*Don\'t forget to add user to *{role_title}s* on juneOS.*\n"\
-                                  f"*[LINK|https://junehomes.com/december_access/staff/propertymanager/add/]*"
+                            link = f"*Don\'t forget to add user to *{role_title}s* on juneOS.*\n" \
+                                   f"*[LINK|https://junehomes.com/december_access/staff/propertymanager/add/]*"
                         elif role_title == "City manager":
                             link = f"*Don\'t forget to add user to *{role_title}s* on juneOS.*\n" \
                                    f"*[LINK|https://junehomes.com/december_access/staff/citymanager/add/]*"
@@ -679,15 +678,35 @@ if __name__ == 'mainfastapi':
                 return
 
             elif jira_new_status == "Create a Zendesk account":
-                print("WIP Zendesk, probably will never be done ;')")
-                f.send_jira_comment('Zendesk users should be added either via SAML or manually *[here|https://junehomes.zendesk.com/agent/users/new]*'
-                                    ' under [mailto:admin+zendesk@junehomes.com] account.\n'
-                                    'New license can be bought *[here|https://junehomes.zendesk.com/admin/account/billing/subscription]*.\n'
-                                    'Notion instruction on how to add new agents is *['
-                                    'here|https://www.notion.so/junehomes/How-to-create-accounts-for-new-Employees-6b78fbc2a124400687df01cd73a14d4e'
-                                    '#6fc1aec9f79a44de93919fefa19095fd]*.',
-                                    jira_key=jira_key)
-                return
+
+                access_token = f.get_actual_token('access_token')
+                token_datetime = f.get_actual_token('datetime')
+                expires_in_time = f.get_actual_token('expires_in')
+                current_time = int(time.time())
+
+                if int(token_datetime) + int(expires_in_time) < current_time:  # token expired i.e. expires_in exceeded
+
+                    print('Token Expired, needs to be refreshed')
+                    f.send_jira_comment("*Access to Google workspace has expired!*\n"
+                                               "Can't set the parameter allowing to the agent to login to Zendesk on Google Workspace.\n "
+                                               "Please, refresh google access by clicking on \"Create a google account\" on Jira ticket and request new Access Token",
+                                               jira_key=jira_key)
+
+                check_zendesk_login.apply_async(
+                            (suggested_email,
+                             access_token,
+                             jira_key),
+                            queue='new_emps'
+                       )
+
+                # f.send_jira_comment('Zendesk users should be added either via SAML or manually *[here|https://junehomes.zendesk.com/agent/users/new]*'
+                #                     ' under [mailto:admin+zendesk@junehomes.com] account.\n'
+                #                     'New license can be bought *[here|https://junehomes.zendesk.com/admin/account/billing/subscription]*.\n'
+                #                     'Notion instruction on how to add new agents is *['
+                #                     'here|https://www.notion.so/junehomes/How-to-create-accounts-for-new-Employees-6b78fbc2a124400687df01cd73a14d4e'
+                #                     '#6fc1aec9f79a44de93919fefa19095fd]*.',
+                #                     jira_key=jira_key)
+
 
             elif jira_new_status == "Check Role and Permissions":
                 """Checking for filling out RoR table"""
