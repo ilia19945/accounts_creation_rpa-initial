@@ -501,7 +501,7 @@ def create_frontapp_user(suggested_email, first_name, last_name, frontapp_role):
                 "type": "template"
             }
         ],
-        "urn:ietf:params:scim:schemas:extension:frontapp:teammate": None
+        # "urn:ietf:params:scim:schemas:extension:frontapp:teammate": None
     })
     headers = {
         'Accept': 'application/scim+json',

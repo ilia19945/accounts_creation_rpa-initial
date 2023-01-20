@@ -355,13 +355,14 @@ if __name__ == 'mainfastapi':
             elif jira_new_status == "Create a FrontApp account":
 
                 try:
-                    frontapp_role = f.fetching_params_from_file(
+                    frontapp_role_name = f.fetching_params_from_file(
                         filename_contains="frontapp",
                         jsonvalue="teammate_template_id",
                         position_title=role_title,
                         jira_key=jira_key
                     )
-                    print('role is taken from config on Notion')
+                    print('role is taken from config on Notion:', frontapp_role_name)
+                    frontapp_role = roles_dict[frontapp_role_name]
 
                 except Exception as e:
                     print(f"Error: {e}")
@@ -385,7 +386,7 @@ if __name__ == 'mainfastapi':
                                                        f'{e}\nAdd the role to configs.py or make sure the correct *"teammate_template_id": "value"* is filled up on Notion of this role.', jira_key)
 
                 fl.info(f"Frontapp role: {frontapp_role}")
-                print(frontapp_role)
+                print("Frontapp role:", frontapp_role)
 
                 try:
 
@@ -396,12 +397,15 @@ if __name__ == 'mainfastapi':
                                                            frontapp_role=frontapp_role)
 
                     fl.info(f'Status code: {str(frontapp_user[0])}')
-                    fl.info(frontapp_user[1])
+                    if frontapp_user[0] > 300 :
+                        fl.error(f'an error occurred on trying to create an account: {frontapp_user[0]}, '
+                                 f'error: {frontapp_user[1]}')
+                    else:
+                        fl.info(frontapp_user[1])
 
-                    f.send_jira_comment(jira_key=jira_key,
-                                        message='Frontapp User *successfully* created!\n'
-                                                f'User email: *{suggested_email}*.\n')
-                    # f'User Role: *{frontapp_role}*.')
+                        f.send_jira_comment(jira_key=jira_key,
+                                            message='Frontapp User *successfully* created!\n'
+                                                    f'User email: *{suggested_email}*.\n')
                 except KeyError:
                     fl.error("the role doesn't exist")
                     f.send_jira_comment(jira_key=jira_key, message=f'The role specified for a frontapp user: "{frontapp_role}" - *doesn\'t exist!*\n'
@@ -606,7 +610,7 @@ if __name__ == 'mainfastapi':
                             link = ""
 
                         f.send_jira_comment("*JuneOS* user created.\n"
-                                            f"Username: *{personal_email.strip()}*, \n"
+                                            f"Username: *{suggested_email.strip()}*, \n"
                                             f"*[User link|https://junehomes.com/december_access/users/user/{juneos_user.json()['user']['id']}/change/]*.\n"
                                             f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.\n"
                                             f"{link}",
