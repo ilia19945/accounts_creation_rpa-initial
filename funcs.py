@@ -484,20 +484,20 @@ def create_frontapp_user(suggested_email, first_name, last_name, frontapp_role):
         "schemas": [
             "urn:ietf:params:scim:schemas:core:2.0:User"
         ],
-        "userName": f"{suggested_email}",
+        "userName": suggested_email,
         "name": {
-            "givenName": f"{first_name}",
-            "familyName": f"{last_name}"
+            "givenName": first_name,
+            "familyName": last_name
         },
         "active": True,
         "emails": [
             {
-                "value": f"{suggested_email}"
+                "value": suggested_email
             }
         ],
         "roles": [
             {
-                "value": f"{frontapp_role}",
+                "value": frontapp_role,
                 "type": "template"
             }
         ],

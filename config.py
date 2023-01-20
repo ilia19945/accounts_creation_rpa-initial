@@ -36,6 +36,6 @@ roles_dict = {
 
 google_license_skus = {
     "G Suite Business": "Google-Apps-Unlimited",
-    "Google Workspace Enterprise Plus": "1010020025",
-    # "Google Workspace Business Plus": "1010020020"
+    "Google Workspace Business Plus": "1010020020"
+    # "Google Workspace Enterprise Plus": "1010020025",
 }

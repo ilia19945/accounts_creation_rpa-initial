@@ -314,7 +314,7 @@ def async_google_account_license_groups_calendar_creation(
         # calculates the time before sending the email
         # countdown=60
         send_jira_comment(f"*June Homes: corporate email account* email will be sent to\n "
-                          f"User: *{personal_email}*\n"
+                          f"User: *{suggested_email}*\n"
                           f"In: *{round((unix_countdown_time / 3600), 2)}* hours.\n", jira_key)
 
         template = env.get_template('it_services_and_policies_wo_trello_zendesk.txt')
