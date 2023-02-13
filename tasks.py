@@ -416,7 +416,7 @@ def create_amazon_user(suggested_email,
 
     # check if the user is already created
     for i in range(len(user_list)):
-        if suggested_email in user_list[i]['Username']:
+        if suggested_email == user_list[i]['Username']:
             send_jira_comment(f'User: *{suggested_email}* is already created!', jira_key=jira_key)
             fl.info(f'User: *{suggested_email}* is already created!')
             return
@@ -425,7 +425,7 @@ def create_amazon_user(suggested_email,
 
     # check if the analogy user exists on amazon
     for i in range(len(user_list)):
-        if user_email_analogy in user_list[i]['Username']:
+        if user_email_analogy == user_list[i]['Username']:
             amazon_user_id = user_list[i]['Id']
             fl.info(amazon_user_id)
             # receive a user description from amazon
