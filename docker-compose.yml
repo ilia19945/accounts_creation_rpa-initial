@@ -37,3 +37,5 @@ services:
 
   redis:
     image: redis:latest
+    volumes:
+    - ./docker/volumes/redis:/data
