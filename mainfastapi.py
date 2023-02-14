@@ -872,7 +872,9 @@ if __name__ == 'mainfastapi':
                                             f"*[User link|https://junehomes.com/december_access/users/user/{juneos_user.json()['user']['id']}/change/]*.\n"
                                             f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.\n"
                                             f"*Don\'t forget to add user to {position_title}s on juneOS.*\n"
-                                            f"*[LINK|https://junehomes.com/december_access/staff/{link}]*",
+                                            f"*[LINK|https://junehomes.com/december_access/staff/{link}]*\n"
+                                            f"and on *[Vendors|https://junehomes.com/december_access/users/uservendor/] and then assign vendor "
+                                            f"to this [user|https://junehomes.com/december_access/users/user/{juneos_user.json()['user']['id']}/change/]",
                                             jira_key=jira_key)
                         try:
                             juneos_auth = f.juneos_devprod_authorization(dev_or_prod='prod')
