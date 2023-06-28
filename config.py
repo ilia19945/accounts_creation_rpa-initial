@@ -16,8 +16,9 @@ email_cc_list = ['idelia@junehomes.com',
 #                  '456@123.com'
 #                  ]
 
-countdown_for_it_content = 7200  # was 28800 - for Moscow, 14400 for EDT; updated to 2h earlier
-countdown_for_others_depts = 18000  # was 46800 - for Moscow, 32400 for EDT; updated to 2h earlier
+# timezone is always UTC
+countdown_for_it_content = 14400 # 7AM Moscow (UTC time + 4h)
+countdown_for_others_depts = 43200 # 12PM Athens (i.e. UTC time + 12h)
 
 # for frontapp
 # when the new role on Frontapp is added - it should be also added to this dictionary
