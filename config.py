@@ -51,3 +51,9 @@ google_license_skus = {
     "Google Workspace Business Plus": "1010020025"
     # "Google Workspace Enterprise Plus": "1010020020",
 }
+
+# JuneHomes instance ID - old / unused
+# instance_id = 'a016cbe1-24bf-483a-b2cf-a73f2f389cb4'
+
+# USRENATPS
+instance_id = 'eed49c00-05b4-4446-9156-f4b698bf3dd7'
