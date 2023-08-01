@@ -1,7 +1,7 @@
 import json
 import os
 import time
-from datetime import timedelta
+from datetime import timedelta, datetime
 from pprint import pprint
 import re
 import boto3
@@ -68,6 +68,10 @@ def async_google_account_license_groups_calendar_creation(
         supervisor_email,
         role_title,
         jira_key, ):
+
+
+    hire_start_date = datetime.strptime(hire_start_date, '%Y-%m-%dT%H:%M:%S') #fix str + timedelta concat error
+
     google_user = create_google_user_req(first_name, last_name, suggested_email, organizational_unit)
 
     if google_user[0] < 300:  # user created successfully
@@ -319,7 +323,7 @@ def async_google_account_license_groups_calendar_creation(
         # countdown=60
         send_jira_comment(f"*June Homes: corporate email account* email will be sent to\n "
                           f"User: *{suggested_email}*\n"
-                          f"T: *{hire_start_date}* UTC.\n", jira_key)
+                          f"At: *{hire_start_date}* UTC.\n", jira_key)
 
         template = env.get_template('it_services_and_policies_wo_trello_zendesk.txt')
         final_draft = template.render()

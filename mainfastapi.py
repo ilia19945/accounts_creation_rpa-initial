@@ -177,7 +177,7 @@ if __name__ == 'mainfastapi':
                 hire_start_date += countdown_for_others_depts
             fl.info(f"ETA for the task execution: {str(hire_start_date)}")
             if hire_start_date < datetime.now():
-                hire_start_date = datetime.now()+ timedelta(minutes=2)
+                hire_start_date = datetime.now() + timedelta(minutes=2)
 
             fl.info(f"Task ETA: {hire_start_date} UTC")
 
@@ -751,7 +751,7 @@ if __name__ == 'mainfastapi':
             hire_start_date += countdown_for_others_depts
 
             if hire_start_date < datetime.now():
-                hire_start_date = datetime.now()+ timedelta(minutes=2)
+                hire_start_date = datetime.now() + timedelta(minutes=2)
 
             # try:
             #     groups = f.get_juneos_groups_from_position_title(file_name='groups_maintenance.json')[position_title]
