@@ -484,7 +484,7 @@ def create_amazon_user(suggested_email,
              final_draft,
              hire_start_date),
             queue='new_emps',
-            countdown=hire_start_date + timedelta(minutes=2)
+            eta=hire_start_date + timedelta(minutes=2)
         )
 
 
