@@ -236,7 +236,6 @@ def async_google_account_license_groups_calendar_creation(
                          hire_start_date),
                         queue='new_emps',
                         eta=hire_start_date + timedelta(minutes=2)
-                        # countdown=round(unix_countdown_time) + 120
                     )
 
                 else:
@@ -280,7 +279,6 @@ def async_google_account_license_groups_calendar_creation(
                          hire_start_date),
                         queue='new_emps',
                         eta=hire_start_date + timedelta(minutes=2)
-                        # countdown=round(unix_countdown_time) + 120
                     )
 
                     fl.info(f'ELK Prod user is created. ELK Prod credentials will be sent at: '
@@ -315,7 +313,6 @@ def async_google_account_license_groups_calendar_creation(
              hire_start_date),
             queue='new_emps',
             eta=hire_start_date + timedelta(minutes=2)
-            # countdown=round(unix_countdown_time) + 120
         )
         fl.info(f'June Homes: corporate email account will be sent at {hire_start_date} UTC')
 
@@ -341,11 +338,9 @@ def async_google_account_license_groups_calendar_creation(
                  [],
                  'IT services and policies',
                  final_draft,
-                 # round(unix_countdown_time / 3600)),
                  hire_start_date),
                 queue='new_emps',
                 eta=hire_start_date + timedelta(minutes=10)
-                # countdown=round(unix_countdown_time) + 600
             )
 
             # calculates the time before sending the email
@@ -366,7 +361,6 @@ def async_google_account_license_groups_calendar_creation(
                  hire_start_date),
                 queue='new_emps',
                 eta=hire_start_date + timedelta(minutes=10)
-                # countdown=round(unix_countdown_time) + 600
             )
 
             # calculates the time before sending the email
@@ -382,10 +376,16 @@ def async_google_account_license_groups_calendar_creation(
 
 
 @celery_app.task
-def create_amazon_user(suggested_email: str = None, first_name: str = None, last_name: str = None,
-                       user_email_analogy: str = None, password: str = None, final_draft: str = None,
-                       unix_countdown_time: int = None, jira_key: str = None) -> bool:
+def create_amazon_user(suggested_email,
+                       first_name,
+                       last_name,
+                       user_email_analogy,
+                       password,
+                       final_draft,
+                       hire_start_date,
+                       jira_key) -> bool:
     client = boto3.client('connect')
+    hire_start_date = datetime.strptime(hire_start_date, '%Y-%m-%dT%H:%M:%S')  # fix str + timedelta concat error
 
     def check_amazon_user(user_email_analogy: str) -> dict:
         response = client.search_users(
@@ -472,7 +472,7 @@ def create_amazon_user(suggested_email: str = None, first_name: str = None, last
                 f'An email with Amazon account credentials will be sent to {suggested_email}')
         send_jira_comment('*Amazon account* is created successfully!\n'
                           f'An email with Amazon account credentials will be sent to *{suggested_email}* '
-                          f'in *{round(unix_countdown_time / 3600)}* hours\n',
+                          f'At *{hire_start_date}* UTC.\n',
                           jira_key=jira_key)
 
         # normal flow - returns another celery task to send the email
@@ -482,12 +482,13 @@ def create_amazon_user(suggested_email: str = None, first_name: str = None, last
              email_cc_list,
              'Access to Amazon Connect call center',
              final_draft,
-             round(unix_countdown_time / 3600)),
+             hire_start_date),
             queue='new_emps',
-            countdown=round(unix_countdown_time + 120))
+            countdown=hire_start_date + timedelta(minutes=2)
+        )
 
 
-# old func with sync
+# old func with async
 # @celery_app.task
 # def create_amazon_user(suggested_email,
 #                        first_name,
