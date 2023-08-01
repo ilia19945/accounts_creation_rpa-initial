@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from datetime import timedelta
 from pprint import pprint
 import re
 import boto3
@@ -20,7 +21,7 @@ from jinja2 import Environment, FileSystemLoader
 loader = FileSystemLoader("email_templates")
 env = Environment(loader=loader)
 
-# celery_app = Celery('tasks', backend='redis://localhost:6379', broker='redis://localhost:6379', queue='new_emps,terminations,other')
+# celery_app = Celery('tasks', backend='redis://localhost:6379', broker='redis://localhost:6379', queue='new_emps,terminations,other') # for localhost development not in docker container
 celery_app = Celery('tasks', backend='redis://redis:6379/0', broker='redis://redis:6379/0', queue='new_emps,terminations,other')
 celery_app.conf.broker_transport_options = {'visibility_timeout': 2592000}  # 30 days
 fl.info('Celery server has successfully initialised.')
@@ -35,8 +36,8 @@ data_folder = Path(".")
 # celery -A tasks flower --basic_auth=admin:admin
 
 @celery_app.task
-def send_gmail_message(sender, to, cc, subject, message_text, countdown):
-    fl.info(f'A new task is received. Email subject: {subject}. To: {to}. Countdown (in hours):{countdown}.')
+def send_gmail_message(sender, to, cc, subject, message_text, hire_start_date):
+    fl.info(f'A new task is received. Email subject: {subject}. To: {to}. Countdown at:{hire_start_date} UTC.')
 
     message = MIMEText(message_text, 'html')
     message['from'] = sender
@@ -51,8 +52,8 @@ def send_gmail_message(sender, to, cc, subject, message_text, countdown):
     server.login(sender, gmail_app_password)
     server.sendmail(from_addr=sender, to_addrs=recipients, msg=message.as_string())
     server.quit()
-    fl.info(f'Message will be sent to:{to}, hours to send: {countdown}')
-    return f'Message was successfully sent to:{to}, hours to send was: {countdown}'
+    fl.info(f'Message will be sent to:{to}, at: {hire_start_date}')
+    return f'Message was successfully sent to:{to}, at: {hire_start_date}'
 
 
 @celery_app.task
@@ -62,7 +63,7 @@ def async_google_account_license_groups_calendar_creation(
         suggested_email,
         organizational_unit,
         gmail_groups,
-        unix_countdown_time,
+        hire_start_date,
         personal_email,
         supervisor_email,
         role_title,
@@ -135,7 +136,7 @@ def async_google_account_license_groups_calendar_creation(
             # !!!!!!!!!!!!!!!! dont forget to turn on again!
             # ----------------------------------------------
             # Ping Idelia to add the new IT emp to Gitlab and CI/CD
-            message = open("mention_idelia.txt", "r", encoding="UTF-8").read()
+            message = open("mention_itsupport_head.txt", "r", encoding="UTF-8").read()
             send_jira_comment(message=json.loads(message.replace('suggested_email', suggested_email)),
                               jira_key=jira_key)
 
@@ -209,10 +210,10 @@ def async_google_account_license_groups_calendar_creation(
 
                 if adding_user_to_elk_dev[0].status_code < 300:
 
-                    fl.info(f'ELK Dev user is created. ELK dev credentials will be sent in: '
-                            f'*{round(unix_countdown_time / 3600)} hours*.')
+                    fl.info(f'ELK Dev user is created. ELK dev credentials will be sent at: '
+                            f'{hire_start_date} UTC.')
                     send_jira_comment(f'ELK Dev user is created. ELK dev credentials will be sent in: '
-                                      f'*{round(unix_countdown_time / 3600)} hours*.', jira_key)
+                                      f'{hire_start_date} UTC.', jira_key)
 
                     template = env.get_template(name="kibana_jinja.txt")
 
@@ -228,9 +229,10 @@ def async_google_account_license_groups_calendar_creation(
                          email_cc_list + [supervisor_email],
                          'Your Kibana.Development credentials.',
                          final_draft,
-                         round(unix_countdown_time / 3600)),
+                         hire_start_date),
                         queue='new_emps',
-                        countdown=round(unix_countdown_time) + 120
+                        eta=hire_start_date + timedelta(minutes=2)
+                        # countdown=round(unix_countdown_time) + 120
                     )
 
                 else:
@@ -271,15 +273,16 @@ def async_google_account_license_groups_calendar_creation(
                          email_cc_list + [supervisor_email],
                          'Your Kibana.Production credentials.',
                          final_draft,
-                         round(unix_countdown_time / 3600)),
+                         hire_start_date),
                         queue='new_emps',
-                        countdown=round(unix_countdown_time) + 120
+                        eta=hire_start_date + timedelta(minutes=2)
+                        # countdown=round(unix_countdown_time) + 120
                     )
 
-                    fl.info(f'ELK Prod user is created. ELK Prod credentials will be sent in: '
-                            f'*{round((unix_countdown_time / 3600), 2)} hours*.')
+                    fl.info(f'ELK Prod user is created. ELK Prod credentials will be sent at: '
+                            f'{hire_start_date} UTC.')
                     send_jira_comment(f'ELK Prod user is created. ELK Prod credentials will be sent in: '
-                                      f'*{round((unix_countdown_time / 3600), 2)} hours*.', jira_key)
+                                      f'{hire_start_date} UTC.', jira_key)
                 else:
 
                     fl.info(f'ELK Prod user is *NOT created!*'
@@ -305,17 +308,18 @@ def async_google_account_license_groups_calendar_creation(
              email_cc_list + [supervisor_email],
              'June Homes: corporate email account',
              final_draft,
-             round(unix_countdown_time / 3600)),
+             hire_start_date),
             queue='new_emps',
-            countdown=round(unix_countdown_time) + 120
+            eta=hire_start_date + timedelta(minutes=2)
+            # countdown=round(unix_countdown_time) + 120
         )
-        fl.info(f'June Homes: corporate email account will be sent in {round((unix_countdown_time / 3600), 2)}')
+        fl.info(f'June Homes: corporate email account will be sent at {hire_start_date} UTC')
 
         # calculates the time before sending the email
         # countdown=60
         send_jira_comment(f"*June Homes: corporate email account* email will be sent to\n "
                           f"User: *{suggested_email}*\n"
-                          f"In: *{round((unix_countdown_time / 3600), 2)}* hours.\n", jira_key)
+                          f"T: *{hire_start_date}* UTC.\n", jira_key)
 
         template = env.get_template('it_services_and_policies_wo_trello_zendesk.txt')
         final_draft = template.render()
@@ -333,13 +337,15 @@ def async_google_account_license_groups_calendar_creation(
                  [],
                  'IT services and policies',
                  final_draft,
-                 round(unix_countdown_time / 3600)),
+                 # round(unix_countdown_time / 3600)),
+                 hire_start_date),
                 queue='new_emps',
-                countdown=round(unix_countdown_time) + 600
+                eta=hire_start_date + timedelta(minutes=10)
+                # countdown=round(unix_countdown_time) + 600
             )
 
             # calculates the time before sending the email
-            fl.info(f'June Homes: corporate email account will be sent in {round((unix_countdown_time / 3600), 2)}')
+            fl.info(f'June Homes: corporate email account will be sent at {hire_start_date}')
 
         else:
 
@@ -353,16 +359,16 @@ def async_google_account_license_groups_calendar_creation(
                  [],
                  'IT services and policies',
                  final_draft,
-                 round(unix_countdown_time / 3600)),
+                 hire_start_date),
                 queue='new_emps',
-                countdown=round(unix_countdown_time) + 600
+                eta=hire_start_date + timedelta(minutes=10)
+                # countdown=round(unix_countdown_time) + 600
             )
 
             # calculates the time before sending the email
-            fl.info(f"IT services and policies email will be sent in {round((unix_countdown_time + 300) / 3600, 2)} hours.")
+            fl.info(f"IT services and policies email will be sent at {hire_start_date} UTC.")
         send_jira_comment("Final is reached!\n"
-                          f"*IT services and policies* email will be sent in *{round((unix_countdown_time + 300) / 3600, 2)}* "
-                          "hours.",
+                          f"*IT services and policies* email will be sent at {hire_start_date} UTC",
                           jira_key=jira_key)
 
     else:
@@ -378,7 +384,7 @@ def create_amazon_user(suggested_email,
                        user_email_analogy,
                        password,
                        final_draft,
-                       unix_countdown_time,
+                       hire_start_date,
                        jira_key):
     client = boto3.client('connect')
     instance_id = 'a016cbe1-24bf-483a-b2cf-a73f2f389cb4'
@@ -480,7 +486,7 @@ def create_amazon_user(suggested_email,
                         f'An email with Amazon account credentials will be sent to {suggested_email}')
                 send_jira_comment('*Amazon account* is created successfully!\n'
                                   f'An email with Amazon account credentials will be sent to *{suggested_email}* '
-                                  f'in *{round(unix_countdown_time / 3600)}* hours\n',
+                                  f'at *{hire_start_date}* UTC\n',
                                   jira_key=jira_key)
 
                 # normal flow - returns another celery task to send the email
@@ -490,9 +496,11 @@ def create_amazon_user(suggested_email,
                      email_cc_list,
                      'Access to Amazon Connect call center',
                      final_draft,
-                     round(unix_countdown_time / 3600)),
+                     hire_start_date),
                     queue='new_emps',
-                    countdown=round(unix_countdown_time + 120))
+                    eta=hire_start_date + timedelta(minutes=2)
+                    # countdown=round(unix_countdown_time + 120)
+                )
 
         else:
             print("Iteration: ", i)
@@ -931,10 +939,9 @@ def check_zendesk_login(user_email, access_token, jira_key):
 # celery_app.control.revoke('c944ee91-d4e7-4733-a82b-2dbdaef7c809')
 
 #
-# @celery_app.task
-# def add(x, y):
-#     time.sleep(600)
-#     return x + y
+@celery_app.task
+def add(x, y):
+    return x + y
 #
 #
 # @celery_app.task

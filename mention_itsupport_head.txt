@@ -8,8 +8,8 @@
                 {
                     "type": "mention",
                     "attrs": {
-                        "id": "5def73687dc0360ecd02209c",
-                        "text": "@Idelia Ayzyatulova",
+                        "id": "5f3e766be1154200468e58a7",
+                        "text": "@Kerry S",
                         "accessLevel": ""
                     }
                 },

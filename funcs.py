@@ -44,10 +44,6 @@ def get_actual_token(arg):
         newest_data = data.read().split('\n')[-2]
         token = json.loads(newest_data)[arg]
         return token
-    # f = open(r'''C:\PythonProjects\Fastapi\access_refresh_tokens.json''')
-    # data = json.load(f)
-    # # print(data)
-    # return data["tokens"][-1][arg]
 
 
 """make the http request to refresh the token Step 2:
@@ -88,12 +84,10 @@ def exchange_auth_code_to_access_refresh_token(code):
                   'grant_type=authorization_code'
     response = requests.post(request_row)  # send and receives response
 
-    # print(response.headers)  # receives headers in dict
     fl.info(response.json())  # receives body in dict
     refreshed_token = response.json()
     if refreshed_token.get("error") is None:
         refreshed_token['datetime'] = str(int(time.time()))  # append datetime to dict
-        # print(refreshed_token)  # receives body in dict
         refreshed_token = json.dumps(refreshed_token)  # convert dict to json
         # write json to the end of the file
         with open('access_refresh_tokens.json', 'a') as file:
@@ -116,15 +110,9 @@ def refresh_token_func():
                       '&grant_type=refresh_token'
     refreshed_token = requests.post(refresh_request)  # send and receives response
 
-    # print(refreshed_token.headers)  # receives headers in dict
-    # print(refreshed_token.json())  # receives body in dict
     refreshed_token = refreshed_token.json()
     refreshed_token['datetime'] = str(int(time.time()))  # append datetime to dict
-
-    # print(refreshed_token)  # receives body in dict
     refreshed_token = json.dumps(refreshed_token)  # convert dict to json
-
-    # print(refreshed_token)
     # write json to the end of the file
     file = open('access_refresh_tokens.json', 'a')
     file.write(str(refreshed_token) + '\n')
@@ -206,9 +194,6 @@ def adding_user_to_google_group(gmail_groups_refined, suggested_email):
         else:
             final_str += f"Gmail group *{str(i)}* assigning finished with error code: *{assign_google_group.status_code}*. " \
                          f"Error: *{assign_google_group.json()['error']['message']}*\n"
-            # print(assign_google_group.status_code)
-        # print(assign_google_group.json())
-    # print(final_row)
     fl.info(f"(3/3) Assigned google groups:\n"
             f"{final_str}")
     return final_str
@@ -285,7 +270,6 @@ def send_jira_comment(message, jira_key):
 
 def juneos_devprod_authorization(dev_or_prod):
     if dev_or_prod == 'dev':
-        # print('dev was requested')
         url = "https://dev.junehomes.net/api/v2/auth/login-web-token/"
 
         payload = json.dumps({
@@ -293,11 +277,10 @@ def juneos_devprod_authorization(dev_or_prod):
             "password": juneos_dev_password
         })
     elif dev_or_prod == 'prod':
-        # print('prod was requested')
         url = "https://junehomes.com/api/v2/auth/login-web-token/"
 
         payload = json.dumps({
-            "email": juneos_prod_login,  # на проде под отдельной
+            "email": juneos_prod_login,
             "password": juneos_prod_password
         })
 
@@ -312,10 +295,6 @@ def juneos_devprod_authorization(dev_or_prod):
 
     try:
         response = requests.request("POST", url, headers=headers, data=payload)
-        # return response.status_code, \
-        #        response.cookies['csrftoken'], \
-        #        response.cookies['sessionid'], \
-        #        response.json()['token']
         return response
     except Exception as e:
         print("Error on sending a request to JuneOS:", e)
@@ -360,7 +339,6 @@ def create_juneos_user(first_name, last_name, suggested_email, personal_phone, d
 
 def get_juneos_groups_from_position_title(file_name):
     file_to_open = data_folder / 'permissions_by_orgunits' / file_name
-    # with open('permissions_by_orgunits/' + file_name, "r") as data:
     with open(file_to_open, "r") as data:
         groups_sales = json.loads(data.read())
         return groups_sales
@@ -400,7 +378,6 @@ def send_gmail_message(sender, to, cc, subject, message_text):
     message['from'] = sender
     message['cc'] = cc
     message['subject'] = subject
-    # print(message)
     raw_message = base64.urlsafe_b64encode(message.as_string().encode()).decode()
 
     url = f"https://gmail.googleapis.com/gmail/v1/users/{sender}/messages/send"
@@ -434,9 +411,7 @@ def create_draft_message(sender, to, cc, subject, message_text):
     message['from'] = sender
     message['subject'] = subject
     message['cc'] = cc
-    # print(message)
     raw_message = base64.urlsafe_b64encode(message.as_string().encode()).decode()
-    # print(raw_message)
     url = f"https://gmail.googleapis.com/gmail/v1/users/{sender}/drafts"
 
     payload = json.dumps({
@@ -501,7 +476,6 @@ def create_frontapp_user(suggested_email, first_name, last_name, frontapp_role):
                 "type": "template"
             }
         ],
-        # "urn:ietf:params:scim:schemas:extension:frontapp:teammate": None
     })
     headers = {
         'Accept': 'application/scim+json',
@@ -599,8 +573,6 @@ def notion_search_for_role(position_title, jira_key):
         return False
 
     if len(response.json()['results']) == 0:  # if there is no role with this name
-        # pprint(response.json()['results'], indent=1)
-        # print(f'the value "{role_title}" does not exist in column "Role/Persona name"')
         send_jira_comment(f'the value "*{position_title}*" does not exist in column "Role/Persona name" ❌', jira_key=jira_key)
         return False
 
@@ -609,22 +581,19 @@ def notion_search_for_role(position_title, jira_key):
         role_name = response.json()['results'][0]['properties']['Role/Persona name']['title'][0]['plain_text']
         role_url = response.json()['results'][0]['url']
         permissions_for_persona = response.json()['results'][0]['properties']['Permissions for persona']['relation']
-        # print("permissions_for_persona:")
-        print(len(permissions_for_persona))  # 19 пермиссий для одной роли
-        # print()
+        print(len(permissions_for_persona))
+
 
         child_roles_ids = response.json()['results'][0]['properties']['Is parent to:']['relation']
-        print("child_roles_ids: ", len(child_roles_ids))  # сколько чайлд ролей
+        print("child_roles_ids: ", len(child_roles_ids))  # Check how many child roles
 
-        roles_tree = f'Roles Tree for *[{role_name}|{role_url}]*:'  # чтобы увидеть наглядно дерево ролей
+        roles_tree = f'Roles Tree for *[{role_name}|{role_url}]*:'  # to check the roles tree
         dashes = '----'
         i = 0
         while True:
             i += 1
-            # print(roles_tree)
 
-            print("child_roles_ids list:", child_roles_ids)  # чайлд роли
-
+            print("child_roles_ids list:", child_roles_ids)
             if len(child_roles_ids) == 0:  # if there are no child roles
                 print('No child roles detected')
                 break
@@ -633,54 +602,34 @@ def notion_search_for_role(position_title, jira_key):
                 break
 
             else:
-
-                # pprint(request_child_roles(role_id=child_roles_ids[0]['id']).json())
-
                 child_role_name = get_notion_page_title(child_roles_ids[0]['id']).json()['properties']['Role/Persona name']['title'][0]['plain_text']
                 child_role_url = get_notion_page_title(child_roles_ids[0]['id']).json()['url']
 
                 roles_tree += f"\n{i}." + dashes * i + f"*[{child_role_name}|{child_role_url}]*"
                 print('There are linked child roles!')
-                set_of_permissions_by_each_child = []  # создаем список содержащий списки пермиссий для каждого чайлда
+                set_of_permissions_by_each_child = []  # creating permissions list for each child role
 
                 for role in range(len(child_roles_ids)):
-                    # role_id = response.json()['results'][0]['properties']['Is parent to:']['relation'][role]['id']
-
                     role_id = child_roles_ids[role]['id']
-                    # print(role_id)
-
-                    # берем список пермиссий для этой роли
+                    # taking the pemissions list for the role
                     permissions_for_each_child = request_child_roles(role_id=role_id).json()['properties']['Permissions for persona']['relation']
-                    # list_permissions_for_each_child = []
+                    set_of_permissions_by_each_child.append(permissions_for_each_child)  # appending permissions of each child role to the common list
 
-                    # for permission in range(len(permissions_for_each_child)):  # ищем все пермиссии для роли
-                    #     # append permissions to list of permissions for this child role
-                    #     list_permissions_for_each_child.append(permissions_for_each_child[permission]['id'])  # [1,2] список пермиссий для каждой из чайлд ролей
-                    #     # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-
-                    # append set of permissions to set of children permissions
-                    # set_of_permissions_by_each_child.append(list_permissions_for_each_child)  # пермиссии каждой чайлд роли аппендим в общий список
-                    set_of_permissions_by_each_child.append(permissions_for_each_child)  # пермиссии каждой чайлд роли аппендим в общий список
-
-                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ построили пермиссии для текущего уровня")
-                print(f'Permission set for role is built: ', set_of_permissions_by_each_child)  # теперь есть сет из сетов пермиссий для всех ролей в списке
-                permissions_for_persona.append(set_of_permissions_by_each_child)  # зааппендили в общий лист
+                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ created for the current level")
+                print(f'Permission set for role is built: ', set_of_permissions_by_each_child)  # having a set of sets of permissions for each role
+                permissions_for_persona.append(set_of_permissions_by_each_child)  # appending to main list
                 print("After append to general list: ", len(permissions_for_persona))
-                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ построили пермиссии для текущего уровня")
+                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ created a list for the current level")
 
-                # для каждой чайлд роли проверяем, есть ли и у нее чайлд роль
+                # for each childrole checking if it has any child rol
                 for j in range(len(child_roles_ids)):
                     child_roles_id = request_child_roles(role_id=child_roles_ids[j]['id'])
                     role_name = child_roles_id.json()['properties']['Role/Persona name']['title'][0]['plain_text']
-                    # pprint(child_roles_id.json()['properties']['Is parent to:']['relation'])
-                    # pprint(role_name)
                     print("Number of child roles:", len(child_roles_id.json()['properties']['Is parent to:']['relation']), "of role -", role_name)
-                    print("xxxxxxxxxxxxxxxxxxxxxxxxx")
-
-                # обнуляем список
+                # deleting the list
                 child_roles_ids = []
 
-                # аппендим в него найденную чайлд роль, если она есть
+                # appending the role if it exists
                 if len(child_roles_id.json()['properties']['Is parent to:']['relation']) > 0:
                     child_roles_ids.append(*child_roles_id.json()['properties']['Is parent to:']['relation'])
 
@@ -688,9 +637,6 @@ def notion_search_for_role(position_title, jira_key):
                     break
                 print("child_roles_ids of roles was recreated and appended: ", child_roles_ids)
 
-            print()
-            print()
-            print()
 
         print("roles_tree:")
         print(roles_tree)
@@ -703,7 +649,6 @@ def notion_search_for_role(position_title, jira_key):
             return permissions_for_persona
 
         else:  # correct flow there are linked  permissions to this role!
-            # pprint(permissions_for_persona, indent=1)  # list
             return permissions_for_persona
 
     elif len(response.json()['results']) > 1:  # if there is more than 1 role for this name
@@ -713,10 +658,6 @@ def notion_search_for_role(position_title, jira_key):
         send_jira_comment(f"There there is more than one result for your search ({len(response.json()['results'])}).\n"
                           f"Roles should be unique! Check Rore table for \"{position_title}\" ❌", jira_key=jira_key)
         return False
-    # permissions_for_persona = response.json()['results'][0]['properties']['Permissions for persona']['relation']
-    # if permissions_for_persona
-    # pprint(permissions_for_persona,indent=1)
-
     return response
 
 
@@ -732,18 +673,14 @@ def notion_search_for_permission_block_children(block_id):
     response = requests.request("GET", url, headers=headers, data=payload)
 
     for i in range(len(response.json()['results'])):  # for every block on the page
-        # print('inside func, len:', i + 1, "/", len(response.json()['results']))
 
-        # pprint(response.json()['results'][i], indent=1)
         if 'code' in response.json()['results'][i]:
             print('code block found on the page!')
             permissions = response.json()['results'][i]['code']['rich_text'][0]['text']['content']
-            # print("permissions:")
-            # print(permissions)
+
             try:
-                # print('Parsing...')
+
                 permissions_dict = json.loads(permissions)
-                # print('Permissions are parsed')
                 return dict(permissions_dict), True  # tuple, т.е. валидный, можно записать на диск
 
             except Exception as e:
@@ -751,7 +688,6 @@ def notion_search_for_permission_block_children(block_id):
                 return f"*Validation failed. JSON Error: {e}* ⚠️"
 
         else:
-            # print(f'not a code block: {response.json()["results"][i]}')
             pass
 
     return '*Please add JSON block to the body page* ⚠️'
@@ -772,10 +708,7 @@ def get_notion_page_title(page_id):
 
 def fetching_params_from_file(filename_contains: str, jsonvalue: str, jira_key: str, position_title: str):
     directory = data_folder / 'roles_configs' / jira_key / position_title
-    # print(directory)
     for item in os.listdir(directory):
-        # print(os.listdir(directory))
-        # print(item)
         if os.path.isfile(os.path.join(directory, item)):  # creating a list of files in the directory
             if re.search(filename_contains, item):  # searching for a jsonvalue file in the directory
                 file_to_open = data_folder / "roles_configs" / jira_key / position_title / item
@@ -787,25 +720,19 @@ def fetching_params_from_file(filename_contains: str, jsonvalue: str, jira_key: 
                             return organizational_unit
                         else:
                             print('Organizational unit is not found')
-                            # return None
+
                     except Exception as e:
                         print(f"Error: {e}")
-                        # return None
             else:
                 print(f'"{item}" - doesn\'t contain "{filename_contains}"')
-                # return None
         else:
             print(f'"{item}" - is not a file')
-            # return None
 
 
 def checking_config_for_service_existence(position_title, jira_key):
     directory = data_folder / 'roles_configs' / jira_key / position_title
     items_list = []
-    # print(directory)
     for item in os.listdir(directory):
-        # print(os.listdir(directory))
-        # print(item)
         if os.path.isfile(os.path.join(directory, item)):  # creating a list of files in the directory
             items_list.append(item)
         else:
@@ -825,15 +752,8 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
     permission_name = get_notion_page_title(permission_id).json()['properties']['Name']['title'][0]['plain_text']
     permission_url = get_notion_page_title(permission_id).json()['url']
 
-    # print('current_role_name:', current_role_name)
-    # print('current_role_url:', current_role_url)
-    # print('current_permission_id:', current_permission_id)
-
-    # print('got INTO of notion_search_for_permission_block_children')
     if level == 2:
         service = compare_by_name_permission_for_l2['compare_by_name_permission_for_l2']
-        # print('service: ', service)  # слово
-
         if re.findall(service, permission_name):
             print(permission_name, '-', compare_by_name_permission_for_l2['compare_by_name_permission_for_l2'], 'they match!')
         else:
@@ -850,13 +770,6 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
         file_to_open = data_folder / "roles_configs" / jira_key / position_title / f"{compare_by_name_permission_for_l2['compare_by_name_permission_for_l2']}_config.json"
         with open(file_to_open, 'r') as file:
             result = json.loads(file.read())
-            # print()
-            # print('========')
-            # print('tried to open the file:')
-            # pprint(result)
-            # print(type(result))
-            # print('========')
-            # print()
 
     except Exception as e:
         print("Exception during opening the file:")
@@ -897,8 +810,6 @@ def compare_permissions_by_name(permissions_set,  # might be current_permissions
 
 def compare_role_configs_google(current_json_object, antecedent_json_object):
     for c_index, (c_key, c_value) in enumerate(current_json_object.items()):
-        # print(c_index, c_key, c_value)
-        # print(current_json_object[c_key])
         for a_index, (a_key, a_value) in enumerate(antecedent_json_object.items()):
             if c_key == a_key:
                 if a_value == c_value:  # equal values
@@ -909,8 +820,6 @@ def compare_role_configs_google(current_json_object, antecedent_json_object):
                             if a_value[i].strip() not in c_value:
                                 c_value.append(a_value[i].strip())
 
-                        # print('c_value:')
-                        # print(c_value)
                     elif type(c_value) == str:
                         c_value = a_value
                     else:
@@ -922,8 +831,6 @@ def compare_role_configs_google(current_json_object, antecedent_json_object):
 def compare_role_configs_juneos(current_json_object, antecedent_json_object):
     # !!! "data_file_config" will be replaced by "permission_config[0]"
     for c_index, (c_key, c_value) in enumerate(current_json_object.items()):
-        # print(c_index, c_key, c_value)
-        # print(current_json_object[c_key])
         for a_index, (a_key, a_value) in enumerate(antecedent_json_object.items()):
             if c_key == a_key:
                 if a_value == c_value:  # equal values
@@ -1033,7 +940,6 @@ def full_compare_by_name_and_permissions_with_file(config_name: str,  # googlewo
                     if relevant_config:
                         file_to_open = data_folder / "roles_configs" / jira_key / position_title / f'{config_name}_config.json'
                         with open(file_to_open, 'w+') as file:
-                            # file.write(str(relevant_config)) # более корректная запись
                             json.dump(relevant_config, file, indent=4)
                     else:
                         print('relevant config: ', relevant_config)
@@ -1070,7 +976,6 @@ def comparing_permission_from_notion_vs_config_on_disk(filename,
         with open(filename, 'r') as file:
             data_file_config = json.loads(file.read())
             print("data_file_config:", data_file_config)
-            # print("data_file_config type:", type(data_file_config))
 
     except Exception as e:
         # если не смог прочитать конфиг, то просто перезаписываем и в jira комменте отписываемся что скипнули

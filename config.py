@@ -1,12 +1,17 @@
 # some variables which is useful to twick
 
 # the list of users who receives a copy of emails
-email_cc_list = ['idelia@junehomes.com',
+from datetime import timedelta
+
+
+email_cc_list = [
+    # 'idelia@junehomes.com',
                  'moiz@junehomes.com',
                  'artyom@junehomes.com',
                  'zoi@junehomes.com',
                  'glykeria@junehomes.com'
                  ]
+# email_cc_list = []
 
 # https://bbf1-2600-1f18-fe6-4e00-a90a-82d3-9cb6-1179.ngrok.io - prod
 
@@ -17,8 +22,14 @@ email_cc_list = ['idelia@junehomes.com',
 #                  ]
 
 # timezone is always UTC
-countdown_for_it_content = 14400 # 7AM Moscow (UTC time + 4h)
-countdown_for_others_depts = 43200 # 12PM Athens (i.e. UTC time + 12h)
+# countdown_for_it_content = 14400 # 7AM Moscow (UTC time + 4h)
+# countdown_for_others_depts = 43200 # 12PM Athens (i.e. UTC time + 12h)
+
+# adding hours for email sending to 00:00
+countdown_for_it_content = timedelta(hours=4)
+countdown_for_others_depts = timedelta(hours=12)
+
+
 
 # for frontapp
 # when the new role on Frontapp is added - it should be also added to this dictionary

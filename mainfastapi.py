@@ -9,10 +9,10 @@ from config import email_cc_list, countdown_for_it_content, countdown_for_others
 import requests
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import funcs as f
 import fast_api_logging as fl
-from tasks import send_gmail_message, create_amazon_user, check_role_permissions, new_check_role_and_permissions, async_google_account_license_groups_calendar_creation, check_zendesk_login
+from tasks import send_gmail_message, create_amazon_user, check_role_permissions, new_check_role_and_permissions, async_google_account_license_groups_calendar_creation, check_zendesk_login, add
 
 from fastapi import Body, FastAPI, HTTPException, Query, Request
 from typing import Optional
@@ -45,13 +45,6 @@ jira_key = ''
 
 loader = FileSystemLoader("email_templates")
 env = Environment(loader=loader)
-
-# triggers
-# @app.get("/")
-# async def simple_get():
-#     return {"message": "Hello World"}
-# print("jira_key: " + jira_key)
-# fl.info("jira key: " + jira_key)
 
 if __name__ == 'mainfastapi':
 
@@ -108,15 +101,6 @@ if __name__ == 'mainfastapi':
             fl.error('Received a random request')
             return {"response": 'Why are you on this page?=.='}
 
-
-    # didn't make up on how to use it
-    # @app.middleware("http")
-    # async def check(request: Request, next_call):
-    #     # do something
-    #     response = await next_call(request)
-    #     # do something for example is there any speical
-    #     return response
-
     @app.post("/webhook", status_code=200)  # Jira webhook, tag "employee/contractor hiring"
     async def employee_contract_main_flow(body: dict = Body(...)):
         global jira_key
@@ -133,9 +117,6 @@ if __name__ == 'mainfastapi':
             fl.info(f"Key: {jira_key}")
             fl.info(f"Old Status: {jira_old_status}; New Status: {jira_new_status}")
 
-            # print(jira_description)
-
-            # position_title = jira_description[jira_description.index('*Position title*') + 1]
             role_title = jira_description[jira_description.index('*Role title*') + 1]
 
             try:
@@ -187,19 +168,18 @@ if __name__ == 'mainfastapi':
             supervisor_email = jira_description[jira_description.index('*Supervisor*') + 1]
 
             hire_start_date = jira_description[jira_description.index('*Start date (IT needs 3 WORKING days to create accounts)*') + 1]
-            unix_hire_start_date = datetime.strptime(hire_start_date, '%m/%d/%Y').timestamp()  # unix by the 00:00 AM
+            hire_start_date = datetime.strptime(hire_start_date, '%m/%d/%Y')
             user_email_analogy = jira_description[jira_description.index('*If needs access to the telephony system, describe details (e.g. permissions and settings like which existing user?)*') + 1]
 
             if organizational_unit in ['Technology', 'Brand Marketing']:
-                unix_hire_start_date += countdown_for_it_content
+                hire_start_date += countdown_for_it_content
             else:
-                unix_hire_start_date += countdown_for_others_depts
-            fl.info(f"The type of the date is now {str(unix_hire_start_date)}")
-            unix_countdown_time = unix_hire_start_date - round(time.time())
-            if unix_countdown_time <= 0:
-                unix_countdown_time = 0
+                hire_start_date += countdown_for_others_depts
+            fl.info(f"ETA for the task execution: {str(hire_start_date)}")
+            if hire_start_date < datetime.now():
+                hire_start_date = datetime.now()+ timedelta(minutes=2)
 
-            fl.info(f"time for task countdown in hours: {str(unix_countdown_time / 3600)}")
+            fl.info(f"Task ETA: {hire_start_date} UTC")
 
             # detect only the specific status change
             # creates a Google account + assigns a Google Groups +
@@ -344,7 +324,7 @@ if __name__ == 'mainfastapi':
                              suggested_email,
                              organizational_unit,
                              gmail_groups,
-                             unix_countdown_time,
+                             hire_start_date,
                              personal_email,
                              supervisor_email,
                              role_title,
@@ -389,8 +369,6 @@ if __name__ == 'mainfastapi':
                 print("Frontapp role:", frontapp_role)
 
                 try:
-
-                    # fl.info(f"Frontapp role_id: {roles_dict[frontapp_role]}")
                     frontapp_user = f.create_frontapp_user(suggested_email=suggested_email,
                                                            first_name=first_name,
                                                            last_name=last_name,
@@ -421,7 +399,6 @@ if __name__ == 'mainfastapi':
                         position_title=role_title,
                         jira_key=jira_key
                     )
-                    # print(user_email_analogy)
 
                 except Exception as e:
                     print(f"Error: {e}")
@@ -453,7 +430,7 @@ if __name__ == 'mainfastapi':
                          user_email_analogy,
                          password,
                          final_draft,
-                         unix_countdown_time,
+                         hire_start_date,
                          jira_key),
                         queue='other')
                     return
@@ -493,7 +470,7 @@ if __name__ == 'mainfastapi':
                                             f"Username: *{suggested_email}*, \n"
                                             f"*[User link|https://dev.junehomes.net/december_access/users/user/{juneos_user.json()['user']['id']}/change/] "
                                             f"(Don't forget to make him a superuser on JuneOS.Development.)*.\n"
-                                            f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.",
+                                            f"Credentials will be sent at: {hire_start_date}.",
                                             jira_key=jira_key)
 
                         template = env.get_template(name="juneos_dev_jinja.txt")
@@ -508,13 +485,13 @@ if __name__ == 'mainfastapi':
                                 email_cc_list,
                                 'Access to JuneOS.Development property management system',
                                 final_draft,
-                                round(unix_countdown_time / 3600)
+                                hire_start_date
                             ),
                             queue='new_emps',
-                            countdown=round(unix_countdown_time) + 120
+                            eta= hire_start_date
                         )
 
-                        fl.info(f"Time to send: {str(round(unix_countdown_time / 3600))}")
+                        fl.info(f"Email will be sent: {hire_start_date} UTC")
 
                     else:
 
@@ -585,12 +562,12 @@ if __name__ == 'mainfastapi':
                          email_cc_list,
                          'Access to JuneOS property management system',
                          final_draft,
-                         round(unix_countdown_time / 3600)
+                         hire_start_date
                          ),
                         queue='new_emps',
-                        countdown=round(unix_countdown_time) + 120
+                        eta=hire_start_date
                     )
-                    fl.info(f"email 'Access to JuneOS property management system' will be sent in: {round(unix_countdown_time / 3600)}*, \n")
+                    fl.info(f"email 'Access to JuneOS property management system' will be sent at:{hire_start_date}, \n")
 
                     if role_title == "Property manager":
                         link = f"*Don\'t forget to add user to *{role_title}s* on juneOS.*\n" \
@@ -611,7 +588,7 @@ if __name__ == 'mainfastapi':
                     f.send_jira_comment("*JuneOS* user created.\n"
                                         f"Username: *{suggested_email.strip()}*, \n"
                                         f"*[User link|https://junehomes.com/december_access/users/user/{juneos_user.json()['user']['id']}/change/]*.\n"
-                                        f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.\n"
+                                        f"Credentials will be sent at: {hire_start_date}.\n"
                                         f"{link}",
                                         jira_key=jira_key)
                     try:
@@ -753,6 +730,7 @@ if __name__ == 'mainfastapi':
             # role_title = jira_description[jira_description.index('*Role title*') + 1]
             first_name = jira_description[jira_description.index('*First name*') + 1]
             last_name = jira_description[jira_description.index('*Last name*') + 1]
+            suggested_email = first_name.lower() + '.' + last_name.lower() + "@junehomes.com"
 
             personal_email = jira_description[jira_description.index('*Personal email*') + 1].split("|")[0][
                              0:(len(jira_description[jira_description.index('*Personal email*') + 1]))]
@@ -765,16 +743,15 @@ if __name__ == 'mainfastapi':
                     personal_email = personal_email[1:]
 
             personal_phone = jira_description[jira_description.index('*Personal phone number*') + 1]
-            # supervisor_email = jira_description[jira_description.index('*Supervisor (whom reports to)*') + 1]
+            supervisor_email = jira_description[jira_description.index('*Supervisor (whom reports to)*') + 1]
 
-            hire_start_date = jira_description[jira_description.index('*Start date (IT needs 3 working days to create accounts)*') + 1]
-            unix_hire_start_date = datetime.strptime(hire_start_date, '%m/%d/%Y').timestamp()  # unix by the 00:00 AM
+            start_date = jira_description[jira_description.index('*Start date (IT needs 3 working days to create accounts)*') + 1]
+            hire_start_date = datetime.strptime(start_date, '%m/%d/%Y')
 
-            fl.info(f"The type of the date is now {str(unix_hire_start_date)}")
-            unix_countdown_time = unix_hire_start_date - round(time.time())
-            print(unix_countdown_time)
-            if unix_countdown_time <= 0:
-                unix_countdown_time = 0
+            hire_start_date += countdown_for_others_depts
+
+            if hire_start_date < datetime.now():
+                hire_start_date = datetime.now()+ timedelta(minutes=2)
 
             # try:
             #     groups = f.get_juneos_groups_from_position_title(file_name='groups_maintenance.json')[position_title]
@@ -782,7 +759,7 @@ if __name__ == 'mainfastapi':
             # except Exception as e:
             #     print('Error on trying to get groups from file:', e)
 
-            fl.info(f"time for task countdown in hours: {str(unix_countdown_time / 3600)}")
+            fl.info(f"Task ETA: {hire_start_date}")
             if jira_new_status == 'Create a JuneOS account':
 
                 fl.info('Maintenance employee')
@@ -827,12 +804,13 @@ if __name__ == 'mainfastapi':
                              email_cc_list,
                              'Access to JuneOS property management system',
                              final_draft,
-                             round(unix_countdown_time / 3600)
+                             hire_start_date
                              ),
                             queue='new_emps',
-                            countdown=round(unix_countdown_time) + 120
+                            eta=hire_start_date
+                            # countdown=round(unix_countdown_time) + 120
                         )
-                        fl.info(f"email 'Access to JuneOS property management system' will be sent in: {round(unix_countdown_time / 3600)}*, \n")
+                        fl.info(f"email 'Access to JuneOS property management system' will be sent at: {hire_start_date} \n")
 
                         template = env.get_template(name="it_services_and_policies_wo_trello_zendesk.txt")
                         final_draft = template.render()
@@ -843,13 +821,15 @@ if __name__ == 'mainfastapi':
                              [],
                              'IT services and policies',
                              final_draft,
-                             round(unix_countdown_time / 3600)),
+                             hire_start_date),
                             queue='new_emps',
-                            countdown=(round(unix_countdown_time) + 600))
+                            eta=hire_start_date + timedelta(minutes=5)
+                            # countdown=(round(unix_countdown_time) + 600)
+                        )
                         # calculates the time before sending the email
-                        fl.info(f"IT services and policies email will be sent in {round((unix_countdown_time + 300) / 3600, 2)} hours.")
+                        fl.info(f"IT services and policies email will be sent at {hire_start_date}.")
 
-                        f.send_jira_comment(f"*IT services and policies* email will be sent in *{round((unix_countdown_time + 300) / 3600, 2)}* hours.",
+                        f.send_jira_comment(f"*IT services and policies* email will be sent at *{hire_start_date}* UTC.",
                                             jira_key=jira_key)
 
                         # creating a proper link for juneos reference
@@ -866,7 +846,7 @@ if __name__ == 'mainfastapi':
                         f.send_jira_comment("*JuneOS* user created.\n"
                                             f"Username: *{personal_email}*, \n"
                                             f"*[User link|https://junehomes.com/december_access/users/user/{juneos_user.json()['user']['id']}/change/]*.\n"
-                                            f"Credentials will be sent in: *{round(unix_countdown_time / 3600, 2)}* hours.\n"
+                                            f"Credentials will be sent at: *{hire_start_date}* UTC.\n"
                                             f"*Don\'t forget to add user to {position_title}s on juneOS.*\n"
                                             f"*[LINK|https://junehomes.com/december_access/staff/{link}]*\n"
                                             f"and on *[Vendors|https://junehomes.com/december_access/users/uservendor/] and then assign vendor "
@@ -940,6 +920,144 @@ if __name__ == 'mainfastapi':
                      jira_key),
                     queue='other')
 
+            elif jira_new_status == "Create a google account":
+                fl.info(f"Key: {jira_key}")
+                fl.info(f"Correct event to create user Google account detected. Perform user creation attempt ...")
+                fl.info(f"timestamp: {str(body['timestamp'])}")
+                fl.info(f"webhookEvent: {body['webhookEvent']}")
+                fl.info(f"user: {body['user']['accountId']}")
+                try:
+                    access_token = f.get_actual_token('access_token')
+                    fl.debug(access_token)
+                    expires_in_time = f.get_actual_token('expires_in')
+                    fl.info(expires_in_time)
+                    token_datetime = f.get_actual_token('datetime')
+                    fl.info(token_datetime)
+                except Exception as error:
+                    return fl.error(error)
+
+                token_datetime = f.get_actual_token('datetime')
+                current_time = int(time.time())
+                token_time = current_time - int(token_datetime)
+
+                # trying to fetch Organizational Unit from permissions in Notion then look to ticket
+                try:
+                    gmail_groups = f.fetching_params_from_file(
+                        filename_contains="googleworkspace",
+                        jsonvalue='Groups',
+                        position_title=position_title,
+                        jira_key=jira_key
+                    )
+                    if gmail_groups is None:
+                        pass
+                    if 'team@junehomes.com' not in gmail_groups:
+                        gmail_groups.append('team@junehomes.com')
+                except Exception as e:
+                    print(f"Error: {e}")
+                    gmail_groups = []
+                    gmail_groups.append('team@junehomes.com')
+
+                # trying to fetch Organizational Unit from permissions in Notion then look to ticket
+                try:
+                    organizational_unit = f.fetching_params_from_file(
+                        filename_contains="googleworkspace",
+                        jsonvalue='Organizational Unit',
+                        position_title=position_title,
+                        jira_key=jira_key
+                    )
+                except Exception as e:
+                    print(f"Error occurred on: {e}")
+                    organizational_unit = 'Resident Experience'
+
+                fl.info(msg=f"Access_token: {access_token}\n"
+                            f"datetime: {expires_in_time}\n"
+                            f"first_name: {first_name}\n"
+                            f"last_name: {last_name}\n"
+                            f"personal_email: {personal_email}\n"
+                            f"suggested_email: {first_name} + '.' + {last_name}@junehomes.com\n"
+                            f"organizational_unit: {organizational_unit}\n"
+                            f"personal_phone:{personal_phone}\n"
+                            f"gmail_groups (list): {str(gmail_groups)}\n"
+                            f"hire_start_date: {hire_start_date}\n"
+                            f"Token lifetime: {token_time}\n"
+                            f"token_datetime:{token_datetime}\n"
+                        )
+
+                # if the token needs to be refreshed
+                if token_time >= expires_in_time:  # token was refreshed more than 1h ago
+                    fl.info('Access token expired! Trying to get get_actual_token("refresh_token")...')
+
+                    try:  # look for refresh token in .json file
+                        refresh_token = f.get_actual_token('refresh_token')
+                        fl.info(f"Refresh_token: {refresh_token}")
+
+                    except KeyError:  # if there is no refresh token -> new app permission should be requested.
+
+                        fl.info("Refresh token wasn't found in the last google response.")
+                        new_access_token = f.get_new_access_token()
+                        fl.info(new_access_token)
+                        jira_comment_response = f.send_jira_comment(
+                            "*Access token expired!*\nNew access token should be requested before moving forward. "
+                            "Press {color:red}*[Pass Google Authorization|" + new_access_token
+                            + "]""*{color} button "
+                              "and accept app permissions (if asked).\n"
+                              "⚠ *REMEMBER: IT'S ONE TIME LINK! SHOULD BE DELETED AFTER REFRESHING* ⚠\n"
+                              "(It's recommended to open in a new browser tab)\n",
+                            jira_key)
+                        if jira_comment_response.status_code > 300:
+                            fl.error(f"Jira comment wasn't added. {jira_comment_response.json()}")
+
+                        fl.info("Jira comment was added successfully")
+
+                    else:  # if refresh token was found in .json file
+                        fl.info('Refresh token was provided by google. Refresh token_func() is executed \n')
+                        f.refresh_token_func()
+                        f.send_jira_comment("Current access_token expired. It was automatically refreshed. "
+                                            "Please try to create google account for the user again.\n"
+                                            "(Switch the ticket status -> \"In Progress\" -> \"Create a Google account\")", jira_key)
+
+                # if there is a valid (< 1h token)
+                else:
+
+                    # add emails for tests here if needed.
+
+                    fl.info('Access token is actual. Suggested user email will be checked to the uniqueness.')
+                    url = f"https://admin.googleapis.com/admin/directory/v1/users/{suggested_email}"
+                    payload = {}
+                    headers = {
+                        'Authorization': f'Bearer {f.get_actual_token("access_token")}'
+                    }
+                    # check if the user with this email already exists
+                    check_for_user_existence = requests.get(url=url, headers=headers, data=payload)
+
+                    if check_for_user_existence.status_code < 300:
+                        """google response with 200 status which means that the account we're trying to create is already exists"""
+                        print(f"The account ({suggested_email}) is already exist!")
+                        f.send_jira_comment(f"The account ({suggested_email}) *is already exist*!\n"
+                                            f"Check suggested email field and try again.\n"
+                                            f"P.S. Remember for Maintenance emps the correct emails format is: \"*first_name.last_name@junehomes.com*\", so update the jira ticket if necessary", jira_key)
+                    else:
+                        """Suggested email is unique"""
+                        print(f'Celery task to create Google account for *"{suggested_email}"* is added.\n'
+                              'Please, wait...')
+                        f.send_jira_comment(f'*Celery task* to create *Google account* for *"{suggested_email}"* is added.\n'
+                                            'Please, wait...', jira_key)
+
+                        async_google_account_license_groups_calendar_creation.apply_async(
+                            (first_name,
+                             last_name,
+                             suggested_email,
+                             organizational_unit,
+                             gmail_groups,
+                             hire_start_date,
+                             personal_email,
+                             supervisor_email,
+                             position_title,
+                             jira_key),
+                            queue='new_emps'
+                        )
+
+
             elif jira_new_status in ["Done", "Rejected"]:
                 try:
                     # path = os.path.join(f".\\roles_configs", jira_key)
@@ -950,7 +1068,7 @@ if __name__ == 'mainfastapi':
                     print("Exception:", e)
 
             elif jira_new_status not in ["In Progress", "Rejected", "Waiting for dev", "Waiting for reply"]:
-                f.send_jira_comment('*Creating a JuneOS account* is the only available status for the maintenance employees.',
+                f.send_jira_comment('*Creating a Google account* and *Creating a JuneOS account* are the only available status for the maintenance employees.',
                                     jira_key=jira_key)
             else:
                 pass
