@@ -418,7 +418,7 @@ if __name__ == 'mainfastapi':
 
                     template = env.get_template(name="amazon_connect_jinja.txt")
                     final_draft = template.render(first_name=first_name,
-                                                  suggested_email=suggested_email,
+                                                  suggested_email=suggested_email.split('@')[0] + '@usrentapts.com',
                                                   amazon_password=password
                                                   )
 

@@ -429,12 +429,12 @@ def create_amazon_user(suggested_email: str = None, first_name: str = None, last
     # creating a user
     try:
         create_user = client.create_user(
-            Username=suggested_email,
+            Username=suggested_email.split("@")[0] + "@usrentapts.com",
             Password=password,
             IdentityInfo={
                 'FirstName': first_name,
                 'LastName': last_name,
-                'Email': suggested_email
+                'Email': suggested_email.split("@")[0] + "@usrentapts.com"
             },
             PhoneConfig={
                 'PhoneType': described_user_analogy['User']['PhoneConfig']['PhoneType'],
@@ -448,7 +448,7 @@ def create_amazon_user(suggested_email: str = None, first_name: str = None, last
         )
         fl.info(create_user)
         # fl.info(f"Amazon password: {password}")
-        fl.info(f'Amazon account for *{suggested_email}* is created.')
+        fl.info(f'Amazon account for *{suggested_email}* - {suggested_email.split("@")[0] + "@usrentapts.com"} is created.')
 
     except Exception as error:  # error while creating a user
         fl.error(msg=error)
@@ -461,7 +461,7 @@ def create_amazon_user(suggested_email: str = None, first_name: str = None, last
 
         # adding the credentials to txt file
         file = open(r'''User Accounts.txt''', 'a', encoding='utf-8')
-        file.write(f"Amazon username: {suggested_email}\nPassword: {password}\n\n")
+        file.write(f"Amazon username: {suggested_email.split('@')[0] + '@usrentapts.com'}\nPassword: {password}\n\n")
         file.close()
 
         fl.info('*Amazon account* is created successfully!\n'
