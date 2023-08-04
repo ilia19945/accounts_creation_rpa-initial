@@ -712,7 +712,7 @@ if __name__ == 'mainfastapi':
 
     @app.post("/maintenance_hiring", status_code=200)  # Jira webhook, tag "maintenance employee hiring"
     async def maintenance_main_flow(body: dict = Body(...)):
-
+        global jira_key
         jira_key = body['issue']['key']
 
         detect_change_type = body['changelog']['items'][0]['field']
