@@ -70,7 +70,7 @@ def async_google_account_license_groups_calendar_creation(
         jira_key, ):
 
 
-    hire_start_date = datetime.strptime(hire_start_date, '%Y-%m-%dT%H:%M:%S') #fix str + timedelta concat error
+    hire_start_date = datetime.strptime(hire_start_date, '%Y-%m-%dT%H:%M:%S.%f') #fix str + timedelta concat error
 
     google_user = create_google_user_req(first_name, last_name, suggested_email, organizational_unit)
 
@@ -385,7 +385,7 @@ def create_amazon_user(suggested_email,
                        hire_start_date,
                        jira_key) -> bool:
     client = boto3.client('connect')
-    hire_start_date = datetime.strptime(hire_start_date, '%Y-%m-%dT%H:%M:%S')  # fix str + timedelta concat error
+    hire_start_date = datetime.strptime(hire_start_date, '%Y-%m-%dT%H:%M:%S.%f')  # fix str + timedelta concat error
 
     def check_amazon_user(user_email_analogy: str) -> dict:
         response = client.search_users(
