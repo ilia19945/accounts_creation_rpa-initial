@@ -53,8 +53,8 @@ Accounts creation RPA intended to automate the IT-Support department routine tas
 🏁**Project Final:**  
 Although the project is pretty heavy by the moment I'm writing this - it was written when I had very limited knowledge of coding, therefore some constructs in the code may be suboptimal or outdated. So, a short while ago, I decided to revamp the code, but, unfortunately, I fell under a wave of layoffs and did not finish the code rewamp. Lots of logic depended on the integrations and I decided not to touch them as not being able to test them properly. 
 
+UPD. link to a new repo: [accounts_creation_rpa-revamp](https://github.com/ilia19945/accounts_creation_rpa-revamp/tree/master).  
 
-I'll add a part of the updated code as a new project and will link the repos a bit later to show my coding skills progress. :)  
 ---------------------------------------------------------------------------  
 
 This project - is my first complete, properly build, and fully integrated business processes RPA, which helped me not only to learn coding with Python in general, FastAPI framework, Celery + redis, Containerization (via Docker / docker-compose), using AWS for Deployment and many-many more,  
