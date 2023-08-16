@@ -1,4 +1,5 @@
-# some variables which is useful to twick
+# some variables which is useful to twicking the automation's settings
+
 
 # the list of users who receives a copy of emails
 from datetime import timedelta
@@ -6,26 +7,16 @@ from datetime import timedelta
 
 email_cc_list = [
     # 'idelia@junehomes.com',
-                 'moiz@junehomes.com',
-                 'artyom@junehomes.com',
-                 'zoi@junehomes.com',
-                 'glykeria@junehomes.com'
-                 ]
-# email_cc_list = []
+    # 'it_support_agent_emails@junehomes.com',
+    ]
 
-# https://bbf1-2600-1f18-fe6-4e00-a90a-82d3-9cb6-1179.ngrok.io - prod
-
-# test
-# email_cc_list = ['ilia19945@mail.com',
+# for test
+# email_cc_list = ['test@m.com',
 #                  'ilya.konovalov@junehomes.com',
 #                  '456@123.com'
 #                  ]
 
-# timezone is always UTC
-# countdown_for_it_content = 14400 # 7AM Moscow (UTC time + 4h)
-# countdown_for_others_depts = 43200 # 12PM Athens (i.e. UTC time + 12h)
-
-# adding hours for email sending to 00:00
+# adding hours for email sending to 00:00 UTC
 countdown_for_it_content = timedelta(hours=4)
 countdown_for_others_depts = timedelta(hours=12)
 
