@@ -51,7 +51,10 @@ Accounts creation RPA intended to automate the IT-Support department routine tas
 2. Changing roles when the user is promoted or his /her role in the company changes (i.e. removing all permissions according to the current role -> assigning new permissions according to the target role)
 
 🏁**Project Final:**  
-Although the project is pretty heavy by the moment I'm writing this - it was written when I had very limited knowledge of coding, therefore some constructs in the code may be suboptimal or outdated. Therefore I decided to revamp the code but unfortunately, I fell under a wave of layoffs and did not complete it. Lots of logic depended on the integrations and decided not to touch them as not being able to test them properly. 
+Although the project is pretty heavy by the moment I'm writing this - it was written when I had very limited knowledge of coding, therefore some constructs in the code may be suboptimal or outdated. So, a short while ago, I decided to revamp the code, but, unfortunately, I fell under a wave of layoffs and did not finish the code rewamp. Lots of logic depended on the integrations and I decided not to touch them as not being able to test them properly. 
 
-I'll add a part of the updated code as a new project and will link the repos a bit later to show my coding skills progress. :) 
+
+I'll add a part of the updated code as a new project and will link the repos a bit later to show my coding skills progress. :)  
+
+This project is my first complete, properly build, and fully integrated business processes RPA, which helped me not only to learn code but also to make my colleague's life easier. And I can't be more grateful to JuneHomes for this opportunity. 
 
