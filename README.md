@@ -55,6 +55,9 @@ Although the project is pretty heavy by the moment I'm writing this - it was wri
 
 
 I'll add a part of the updated code as a new project and will link the repos a bit later to show my coding skills progress. :)  
+---------------------------------------------------------------------------  
 
-This project is my first complete, properly build, and fully integrated business processes RPA, which helped me not only to learn code but also to make my colleague's life easier. And I can't be more grateful to JuneHomes for this opportunity. 
+This project - is my first complete, properly build, and fully integrated business processes RPA, which helped me not only to learn coding with Python in general, FastAPI framework, Celery + redis, Containerization (via Docker / docker-compose), using AWS for Deployment and many-many more,  
+**But what I consider more important was to make my colleagues' life easier.  And I can't be more grateful to JuneHomes for this opportunity.**
+
 
