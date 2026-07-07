@@ -30,6 +30,20 @@ from app.services.jira import (
     send_jira_comment,
 )
 
+from app.services.email import (
+    send_gmail_message,
+    create_draft_message,
+)
+
+from app.services.slack import (
+    compare_role_configs_slack,
+)
+
+from app.services.amazon_connect import (
+    delete_amazon_user,
+    compare_role_configs_amazonconnect,
+)
+
 __all__ = [
     # Google Workspace
     "get_app_info",
@@ -46,4 +60,12 @@ __all__ = [
     "adding_jira_cloud_user",
     "adding_jira_user_to_group",
     "send_jira_comment",
+    # Email / Gmail
+    "send_gmail_message",
+    "create_draft_message",
+    # Slack
+    "compare_role_configs_slack",
+    # Amazon Connect
+    "delete_amazon_user",
+    "compare_role_configs_amazonconnect",
 ]
