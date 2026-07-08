@@ -44,6 +44,19 @@ from app.services.amazon_connect import (
     compare_role_configs_amazonconnect,
 )
 
+from app.services.juneos import (
+    juneos_devprod_authorization,
+    create_juneos_user,
+    get_juneos_groups_from_position_title,
+    assign_groups_to_user,
+    compare_role_configs_juneos,
+)
+
+from app.services.zendesk import (
+    check_zendesk_login_param,
+    enable_zendesk_login,
+)
+
 __all__ = [
     # Google Workspace
     "get_app_info",
@@ -68,4 +81,13 @@ __all__ = [
     # Amazon Connect
     "delete_amazon_user",
     "compare_role_configs_amazonconnect",
+    # JuneOS
+    "juneos_devprod_authorization",
+    "create_juneos_user",
+    "get_juneos_groups_from_position_title",
+    "assign_groups_to_user",
+    "compare_role_configs_juneos",
+    # Zendesk
+    "check_zendesk_login_param",
+    "enable_zendesk_login",
 ]
