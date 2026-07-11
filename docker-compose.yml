@@ -1,41 +1,59 @@
-version: '3'
- 
+version: '3.9'
+
 services:
 
   app:
     container_name: aca_app
-    build: .
+    build:
+      context: .
+      dockerfile: dockerfile
     ports:
       - "8000:8000"
-    restart: "unless-stopped"
+    restart: unless-stopped
     volumes:
-    - ./:/code
-    env_file: .env
-      
-  celery:
-    container_name: aca_celery
-    build: ./services/celery
-    volumes:
-    - ./:/code
-    command: celery -A tasks worker -E --loglevel=INFO -Q new_emps,terminations,other
-    env_file: .env
-    depends_on:
-      - redis
-    
-  flower:
-    container_name: aca_flower
-    build: ./services/flower
-    volumes:
-    - ./:/code
-    ports:
-      - "5555:5555"
-    command: celery -A tasks flower --basic_auth=admin:admin
-    
+      - .:/code
     env_file: .env
     depends_on:
       - redis
 
-  redis:
-    image: redis:latest
+  celery:
+    container_name: aca_celery
+    build:
+      context: .
+      dockerfile: dockerfile
+    command: >
+      celery -A tasks.celery_app worker
+      -E --loglevel=INFO
+      -Q new_emps,terminations,other
     volumes:
-    - ./docker/volumes/redis:/data
+      - .:/code
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  flower:
+    container_name: aca_flower
+    build:
+      context: .
+      dockerfile: dockerfile
+    command: >
+      celery -A tasks.celery_app flower
+      --basic_auth=admin:admin
+    ports:
+      - "5555:5555"
+    volumes:
+      - .:/code
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
